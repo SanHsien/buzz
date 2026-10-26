@@ -78,3 +78,12 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 - **`rmcp`**（high／medium）：有漏洞的 1.8.0 來自 `crates/buzz-agent/Cargo.toml` 自己宣告的 `rmcp = { version = "1", ... }`（兩份 lock 都有）；根目錄 `[workspace.dependencies]` 裡的 `rmcp` 沒有任何 crate 繼承。修補版是 2.x／3.x，要把 buzz-agent 的 client／transport-child-process 用法遷移到 3.x（產品碼 API 變動）。Dependabot PR #3（只改那行沒人用的 workspace 宣告與 Tauri lock 的 Windows 依賴指向）因此關閉，並未修掉告警。觸發：上游遷移 buzz-agent 到 rmcp 3.x。
 - **`glib` 0.18.5**（Tauri lock，medium）：修補版 0.20.0，被 gtk3-rs 一整組擋住；觸發：Tauri／gtk 升版。
 - **`@vitest/mocker`**、**`postcss-selector-parser`**：目前可解析的版本低於告警的修補版（受 pnpm 發佈時間政策或相依範圍限制），隔日重跑 `pnpm update` 再試；已在報告列出。
+
+## 2026-10-26 維護者決定：剩餘告警的處理（經維護主管代決）
+
+下列項目**保持現狀、告警保持開啟、不 dismiss**；每項附觸發條件，條件成立才回頭處理。
+
+1. **pip benchmarks 告警**（`benchmarks/harbor-buzz-orchestra/uv.lock`、`.../testbed/uv.lock`，含 PyJWT、anyio、certifi 三個 critical）：不重寫 `uv.lock`。來源改成 pypi.org 會整批重寫、每次同步上游都全檔衝突；benchmarks 不在 fork 以 `uv.lock` 執行、不隨產品發佈，CI 的 benchmark-harbor 亦以 pip 依 `pyproject.toml` 解析、不讀 `uv.lock`。記為**已評估的風險**。觸發條件：上游更新那兩份鎖檔（隨同步帶入），或 fork 開始執行 benchmarks。
+2. **rmcp、`@tiptap/*`＋`prosemirror-*`**：fork 不改產品碼（會與上游分岔）。等上游升級後隨同步帶入。觸發條件：上游升級（rmcp 為上游把 buzz-agent 遷移到 3.x），或公告確認影響 fork 實際使用的路徑。
+3. **`sprig-latest` release**：不建立（不在 fork 公開發佈 CI 建置的二進位檔）；Sprig 發佈 job 維持只在上游 owner 執行。觸發條件：維護者決定要在 fork 發佈二進位檔。
+4. **`glib` 0.18.5（Tauri）、`@vitest/mocker`、`postcss-selector-parser`**：目前沒有可相容的修補版，或受 pnpm 內建發佈時間預設限制。觸發條件：隔日以 `pnpm update <pkg> -r --depth Infinity --lockfile-only` 重試後兩者（尚未重試）；`glib` 待 Tauri／gtk 升版。重試仍無法解析就維持現狀，下次同步上游時再試。
