@@ -104,7 +104,7 @@ _USES_RE = re.compile(
     re.MULTILINE,
 )
 _FULL_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
-_HOLD_NAME_RE =re.compile(r"^\s*(?:require\s+)?[\"']?([A-Za-z0-9_.@/\-]+)")
+_HOLD_NAME_RE = re.compile(r"^\s*(?:require\s+)?[\"']?([A-Za-z0-9_.@/\-]+)")
 LOCAL_SPECS = ("workspace:", "file:", "link:", "portal:")
 _PSEUDO_VERSION_RE = re.compile(r"-\d{14}-")
 
