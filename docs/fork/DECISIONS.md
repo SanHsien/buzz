@@ -87,3 +87,25 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 2. **rmcp、`@tiptap/*`＋`prosemirror-*`**：fork 不改產品碼（會與上游分岔）。等上游升級後隨同步帶入。觸發條件：上游升級（rmcp 為上游把 buzz-agent 遷移到 3.x），或公告確認影響 fork 實際使用的路徑。
 3. **`sprig-latest` release**：不建立（不在 fork 公開發佈 CI 建置的二進位檔）；Sprig 發佈 job 維持只在上游 owner 執行。觸發條件：維護者決定要在 fork 發佈二進位檔。
 4. **`glib` 0.18.5（Tauri）、`@vitest/mocker`、`postcss-selector-parser`**：目前沒有可相容的修補版，或受 pnpm 內建發佈時間預設限制。觸發條件：隔日以 `pnpm update <pkg> -r --depth Infinity --lockfile-only` 重試後兩者（尚未重試）；`glib` 待 Tauri／gtk 升版。重試仍無法解析就維持現狀，下次同步上游時再試。
+
+## 2026-10-27 深度掃描（只掃 fork 自己加的東西）
+
+範圍：`docs/fork/`、`tools/`＋`tests/fork`、fork 新增與修補的 workflow、`deny.toml` 的 ignore、fork 對鎖檔與產品測試碼的改動。上游原封不動的產品碼不在範圍。每個缺陷先寫修前會失敗的測試再修，一個缺陷一個 commit。
+
+已修（測試都在 `tests/fork/test_fork_tools.py`）：
+
+1. **`sprig.yml` 的 `publish-tag` 沒有 owner 守衛。** 在 fork 推 `sprig-v*` tag 會用 CI 建置的二進位檔建立公開 release，與上方「Sprig 發佈 job 維持只在上游 owner 執行」的決定相反（只有滾動 release 的 `publish` 有守衛）。加上守衛；測試檢查所有發佈 workflow 裡有寫入權限的 job 都帶守衛、所有能 push 的 build-push 步驟的 `push=` 都帶守衛。
+2. **新鮮度檢查把未加註解的 SHA pin 讀成版本下限。** `actions/checkout@34e11487…` 的下限變成 `34`（永遠不過期）、`azure/setup-helm@1a275c3b…` 變成 `1`（永遠過期）。三個 pin 受影響（`push-gateway-helm-chart.yml`）。改為 NO FLOOR。
+3. **上游檢查的 `git`／`gh` 呼叫沒有逾時**，網路卡住會拖到 runner 的 10 分鐘上限且不產生報告；`git` 不存在時以裸 traceback 結束。逾時與 `OSError` 現在是 `UpstreamCheckError`（報告「Check failed」、exit 2），`gh` 逾時回 `None`（「未檢查」，不是「無新項目」）。
+4. **兩支工具在無法編碼報告的主控台上崩潰**（Windows 無 `PYTHONUTF8` 的 cp1252／cp950：繁中狀態行或 issue 標題裡的 emoji → `UnicodeEncodeError`），發生在檔案寫完之後，exit 1 與 `--strict` 的「上游有更新」同碼。stdout 改為 `errors="replace"`。
+5. **延後（deferral）的過期判斷以「已審視版本」的精度截斷**：唯一的兩段版本 `openai/codex-action "1.13"` 在 1.13.4 仍延後，與「registry 超過該版本就自動過期」不符。改為全精度比較；`deferredLatest` 無法解析（如 `"latest"`）的項目永遠不會過期，載入時改為忽略。
+6. **Cargo workspace `members` 的 glob 被當字面路徑**，`crates/*` 之類的成員會無聲地從報告消失。改為展開並尊重 `exclude`；目前的明列清單解析結果不變（38 份）。
+7. **registry 回應被截斷（`IncompleteRead`，不是 `OSError`）會讓整份新鮮度報告中止**，改為一筆 CHECK FAILED。
+8. **`FORK.md`／`NOTICE.md` 說產品碼與上游逐位元組相同／未修改**，但 fork 已修補四個 workflow、加兩條 `deny.toml` ignore、升級三份鎖檔、動過 `buzz-dev-mcp` 的測試碼。補上「上游持有檔的修補」表，`deny.toml` 加 `fork patch (SanHsien/buzz)` 標記，測試要求帶標記的檔案必須列在 `FORK.md`。
+9. **Tauri 鎖檔沒跟上 `cargo-deny` 的修補。** CI 的 `cargo-deny check` 只讀根 workspace，所以 tokio 1.54.1（RUSTSEC-2026-0386）、lru 0.18.2（0253）只進了根 `Cargo.lock`；`desktop/src-tauri/Cargo.lock`（桌面 app 實際用的依賴集）仍是 tokio 1.52.3、lru 0.18.1、h2 0.4.15（0258）、rtrb 0.3.4（0274）。以 `cargo update -p <crate> --precise` 升到 tokio 1.54.1、lru 0.18.2、h2 0.4.16、rtrb 0.3.5（相容升級、不動 manifest）；`cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories` 修後沒有 vulnerability／unsound 條目。本機只能 `cargo check --locked -p tokio -p h2 -p rtrb` 通過（完整的 Tauri crate 在本機卡在 `opusic-sys` 需要 cmake），完整編譯交給 CI 的 Desktop Tauri。
+
+觀察（上游的東西，不改；附觸發條件）：
+
+- **Tauri 鎖檔沒有任何 CI 的安全掃描**（Dependabot 只對有 GHSA 的告警開單）。同一個 `cargo deny` 掃 Tauri 鎖檔還會報 `unic-*`、`mach`、`proc-macro-error` 的 unmaintained。要讓 CI 掃它需要另一份帶 ignore 的設定，屬於上游 CI 結構。觸發：維護者要 Tauri 鎖檔進 CI，或下次同步上游時順手重跑上面那條指令。
+- **`str_replace.rs`、`view_image.rs` 的測試 `make_state` 沒拿 `lock_shell_env()`**（`e3561ee` 只補了 `shell.rs`、`read_file.rs`）。它們不依賴 shell 解析結果，沒有已知失敗。觸發：這兩處的測試在 Windows 出現不穩定。
+- **`helm-chart.yml`（`chart-v*` tag）、`push-gateway-helm-chart.yml`（`push-chart-v*` tag）、`staging-dev-relay-image.yml`（手動）沒有 owner 守衛**，在 fork 推 tag 或手動觸發會嘗試推 `ghcr.io/block/*`，結果是權限失敗（紅燈）而不是發佈。fork 不推這些 tag。觸發：fork 開始推 tag，或需要這些 workflow 轉綠。
