@@ -38,6 +38,7 @@ import json
 import os
 import re
 import time
+import tomllib
 import urllib.parse
 import urllib.request
 from collections.abc import Callable
@@ -55,14 +56,27 @@ NPM_MANIFESTS: tuple[str, ...] = (
     "web/package.json",
     "admin-web/package.json",
 )
-# Root workspace (its `[workspace.dependencies]` is where nearly every version lives), the
-# member crates, and the Tauri crate that the workspace excludes. Pub (mobile), Gradle and
-# SwiftPM declarations are not read: no checker here, see docs/fork/DECISIONS.md.
-CARGO_MANIFESTS: tuple[str, ...] = (
-    "Cargo.toml",
-    *sorted(p.relative_to(REPO_ROOT).as_posix() for p in REPO_ROOT.glob("crates/*/Cargo.toml")),
-    "desktop/src-tauri/Cargo.toml",
-)
+# Both Cargo workspaces and every member each one lists: the root (where nearly every
+# version lives in `[workspace.dependencies]`) and the Tauri crate the root excludes. Pub
+# (mobile), Gradle and SwiftPM declarations are not read: no checker here, see
+# docs/fork/DECISIONS.md.
+def _cargo_manifests() -> tuple[str, ...]:
+    found: list[str] = []
+    for workspace_root in ("", "desktop/src-tauri/"):
+        manifest = REPO_ROOT / f"{workspace_root}Cargo.toml"
+        if not manifest.is_file():
+            continue
+        found.append(f"{workspace_root}Cargo.toml")
+        try:
+            data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for member in data.get("workspace", {}).get("members", []):
+            found.append(f"{workspace_root}{member}/Cargo.toml")
+    return tuple(dict.fromkeys(found))
+
+
+CARGO_MANIFESTS: tuple[str, ...] = _cargo_manifests()
 GO_MANIFESTS: tuple[str, ...] = ()
 
 HOLD_MARKER = "freshness-hold:"

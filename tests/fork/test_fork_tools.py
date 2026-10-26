@@ -73,14 +73,43 @@ def test_dependabot_directories_exist() -> None:
 
 def test_codeql_matrix_matches_languages_the_repo_has() -> None:
     languages = set(_workflow("codeql.yml")["jobs"]["analyze"]["strategy"]["matrix"]["language"])
-    assert languages == {"javascript-typescript", "rust", "actions"}
+    assert languages == {"javascript-typescript", "rust", "actions", "python"}
     assert any(REPO_ROOT.glob("crates/*/src/**/*.rs"))
     assert any((REPO_ROOT / "desktop").glob("src/**/*.ts*"))
 
 
-def test_deferrals_file_is_valid_json_with_a_deferrals_map() -> None:
+def test_every_deferral_is_complete_enough_for_the_loader_to_keep_it() -> None:
     data = json.loads((REPO_ROOT / ".github" / "dependency-deferrals.json").read_text("utf-8"))
-    assert isinstance(data["deferrals"], dict)
+    assert isinstance(data["deferrals"], dict) and data["deferrals"]
+    for name, entry in data["deferrals"].items():
+        assert fresh.release_key(str(entry.get("deferredLatest", ""))) is not None, name
+        assert str(entry.get("reason", "")).strip(), name
+    assert len(fresh.load_deferrals()) == len(data["deferrals"])
+
+
+def test_cargo_manifests_include_every_member_of_both_workspaces() -> None:
+    import tomllib
+
+    for root in ("", "desktop/src-tauri/"):
+        data = tomllib.loads((REPO_ROOT / f"{root}Cargo.toml").read_text("utf-8"))
+        for member in data["workspace"]["members"]:
+            assert f"{root}{member}/Cargo.toml" in fresh.CARGO_MANIFESTS, f"{root}{member}"
+
+
+def test_a_full_ticket_page_above_the_watermark_is_not_checked(monkeypatch) -> None:
+    """`gh` truncates silently; advancing the watermark past unlisted items skips them."""
+    import subprocess
+
+    page = [{"number": 9000 - i, "title": "t"} for i in range(upstream.TICKET_LIMIT)]
+
+    def fake_run(*_a, **_k):
+        return subprocess.CompletedProcess([], 0, stdout=json.dumps(page), stderr="")
+
+    monkeypatch.setattr(upstream.subprocess, "run", fake_run)
+    baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 100}
+    assert upstream.collect_new_tickets(baseline, "pr") is None
+    baseline["reviewed_pr_through"] = 8500  # page reaches back past the watermark: complete
+    assert upstream.collect_new_tickets(baseline, "pr") is not None
 
 
 def test_cursor_rule_pins_prs_to_this_fork() -> None:

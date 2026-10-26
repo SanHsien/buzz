@@ -8,7 +8,7 @@
 - **README／AGENTS／CLAUDE 不改。** 這些是上游持有檔；翻轉成繁中會讓每次同步都衝突。fork 說明放 `FORK.md`。
 - **Dependabot 取代 Renovate。** 上游 `renovate.json` 依賴 Renovate 應用程式，fork 沒有安裝，不會運作；本 fork 用 Dependabot（cargo、npm、github-actions、docker、pub）。`renovate.json` 保留不動。
 - **依賴新鮮度只讀 npm、Cargo 與 workflow pins。** Pub（`mobile/pubspec.yaml`）、Gradle、SwiftPM、`benchmarks/` 的 pyproject 沒有對應讀取器；Dependabot 仍涵蓋 pub。觸發條件：這些宣告造成實際漏更時再加讀取器。
-- **CodeQL 語言：javascript-typescript、rust（build-mode none）、actions。** Kotlin 需完整 Android 建置、Swift 需 macOS runner，成本與訊號不成比例；觸發條件：行動端出現本 fork 自己的程式。
+- **CodeQL 語言：javascript-typescript、rust、actions、python（皆 build-mode none）。** Python 只有 `benchmarks/`、`scripts/`、`docs/formal` 與本 fork 的維護工具。 Kotlin 需完整 Android 建置、Swift 需 macOS runner，成本與訊號不成比例；觸發條件：行動端出現本 fork 自己的程式。
 - **不在 Windows 跑上游 CI。** 上游 Windows 只有 `windows-canary`（手動觸發）。
 
 ## 2026-10-26 上游 PR 分流
@@ -22,3 +22,9 @@
 做法：全部寫進 `.github/dependency-deferrals.json`（附 `deferredLatest` 與理由），一旦 registry 超過該版本就重新追問；不調高任何宣告下限。`Swatinem/rust-cache@<sha>` 這類無版本下限的 pin 列為 NO FLOOR（不比較）。
 
 觸發條件：本 fork 開始自己維護產品依賴時，改為逐項升級而不是延後；或上游 Renovate 長期不動某個安全相關套件時，單獨處理。
+
+## 2026-10-26 上游 workflow 在 fork 上的行為
+
+`ci.yml` 對 `push main`／`pull_request` 沒有 `github.repository` 守衛，所以推送到本 fork 會跑完整的上游 CI（Rust、桌面、行動端、security），耗時長且部分步驟可能因缺 secrets 或 runner 而失敗；約 17 支其他 workflow 有守衛（docker、release、canary 等）會跳過。
+
+處理方式：首次推送後讀實際 check runs，把「缺 secrets 造成的紅燈」與「真壞」分開記在這裡（下方「首次 CI 結果」）；**不停用任何 workflow**、不改上游 workflow 檔（避免同步衝突）。必要檢查（branch protection）一律不設，除非確認它真的會回報。

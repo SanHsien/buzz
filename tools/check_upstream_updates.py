@@ -2,18 +2,14 @@
 
 Two tracking modes, selected by ``track`` in the baseline:
 
-``commit``
-    Everything on the upstream branch past ``reviewed_through``.
+``commit`` (used by this fork)
+    Everything on the upstream branch past ``reviewed_through``. Upstream tags
+    several independent lines (``v*``, ``desktop-v*``, ``mobile-v*``...), so a
+    single semver tag cannot stand for "has upstream shipped something".
 
-``release`` (default here)
-    Only what upstream has actually tagged. This fork syncs at release
-    granularity -- v0.1.5, v0.1.6, v0.1.7, v0.1.8 each landed as one reviewed
-    batch -- while upstream `main` moves several times a day. Tracking the
-    branch would mean a permanently failing weekly check reporting a couple of
-    hundred in-flight commits against a target that has already moved, and a
-    check that is always red is a check nobody reads. Tracking tags asks the
-    question this fork actually acts on: has upstream shipped a release we have
-    not reviewed?
+``release``
+    Only the highest semver tag upstream has published, for forks that sync at
+    release granularity while upstream `main` moves faster than they can review.
 """
 
 from __future__ import annotations
@@ -29,7 +25,7 @@ REPO_ROOT = SCRIPT_DIR.parent
 BASELINE_PATH = SCRIPT_DIR / "upstream_baseline.json"
 UPSTREAM_REF_PREFIX = "refs/upstream-check"
 DEFAULT_DECISION_LOG = "docs/fork/DECISIONS.md"
-DEFAULT_DECISION_LOG = "docs/fork/DECISIONS.md"
+TICKET_LIMIT = 1000
 TRACK_MODES = ("release", "commit")
 _SEMVER_TAG_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 
@@ -228,7 +224,7 @@ def collect_new_tickets(baseline: dict, kind: str) -> list[dict] | None:
         result = subprocess.run(
             [
                 "gh", kind, "list", "--repo", slug, "--state", "all",
-                "--limit", "50", "--json", "number,title",
+                "--limit", str(TICKET_LIMIT), "--json", "number,title",
             ],
             capture_output=True,
             text=True,
@@ -246,6 +242,11 @@ def collect_new_tickets(baseline: dict, kind: str) -> list[dict] | None:
     try:
         items = json.loads(result.stdout)
     except ValueError:
+        return None
+    # `gh` lists newest first and silently stops at the limit. If the page is full and its
+    # oldest entry is still above the watermark, items between the two were never listed,
+    # and advancing the watermark would skip them for good: report "not checked" instead.
+    if len(items) >= TICKET_LIMIT and min(item["number"] for item in items) > watermark:
         return None
     return sorted(
         (item for item in items if item["number"] > watermark),
@@ -412,8 +413,8 @@ def main() -> int:
     release: str | None = None
     try:
         baseline = load_baseline()
-        # Tickets are collected whatever the commit axis reports. This fork
-        # tracks release tags, so between two releases the commit axis is
+        # Tickets are collected whatever the commit axis reports. A
+        # release-tracking baseline has no new tag between two releases, so between them the commit axis is
         # legitimately empty -- and that is exactly when an open pull request or
         # an issue is the only place upstream work is visible. Collecting them
         # only when a new tag exists would keep those months invisible.

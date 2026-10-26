@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ["javascript-typescript", "rust", "actions"]
+        language: ["javascript-typescript", "rust", "actions", "python"]
 
     steps:
       - name: Check out source
