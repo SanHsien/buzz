@@ -162,3 +162,22 @@ def test_push_capable_build_steps_carry_the_owner_guard() -> None:
             if push is None or OWNER_GUARD not in push.group(0):
                 missing.append(f"{name}:{job_id}:{step.get('name')}")
     assert not missing, f"build-push steps that can push outside block: {missing}"
+
+
+def test_a_sha_pin_without_a_version_comment_has_no_floor() -> None:
+    """The leading hex digits of a SHA are not a version: `34e11487...` read as floor 34."""
+    sha_only = "      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5\n"
+    [row] = fresh.parse_workflow_actions(sha_only, "x.yml")
+    assert row["minimum"] == ""
+    # A real version still produces a floor, from the comment or from a floating tag.
+    [commented] = fresh.parse_workflow_actions(sha_only.rstrip() + " # v4.3.1\n", "x.yml")
+    assert commented["minimum"] == "4.3.1"
+    [floating] = fresh.parse_workflow_actions("      - uses: actions/checkout@v6\n", "x.yml")
+    assert floating["minimum"] == "6"
+
+
+def test_no_workflow_pin_in_the_tree_gets_a_floor_from_its_sha() -> None:
+    for row in fresh.load_workflow_actions():
+        ref = row["requirement"].split("@", 1)[1]
+        if re.fullmatch(r"[0-9a-f]{12}", ref):  # label of an uncommented SHA pin
+            assert row["minimum"] == "", row

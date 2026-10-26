@@ -93,7 +93,8 @@ _USES_RE = re.compile(
     r"(?:[ \t]*#[ \t]*(.*))?[ \t]*$",
     re.MULTILINE,
 )
-_HOLD_NAME_RE = re.compile(r"^\s*(?:require\s+)?[\"']?([A-Za-z0-9_.@/\-]+)")
+_FULL_SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
+_HOLD_NAME_RE =re.compile(r"^\s*(?:require\s+)?[\"']?([A-Za-z0-9_.@/\-]+)")
 LOCAL_SPECS = ("workspace:", "file:", "link:", "portal:")
 _PSEUDO_VERSION_RE = re.compile(r"-\d{14}-")
 
@@ -430,7 +431,9 @@ def parse_workflow_actions(text: str, source: str) -> list[dict[str, str]]:
         hold = comment[len(HOLD_MARKER) :].strip() if comment.startswith(HOLD_MARKER) else ""
         # A pinned SHA carries its declared version in the trailing comment (`# v7.0.1`);
         # a floating tag (`@v6`) carries it in the ref itself.
-        version_source = comment if comment else ref
+        # An uncommented SHA carries no version at all: its leading hex digits (`34e1148...`)
+        # are not one, and reading them as a floor makes `actions/checkout` look current.
+        version_source = comment if comment else ("" if _FULL_SHA_RE.match(ref) else ref)
         version_match = _RELEASE_RE.match(version_source.lstrip("vV")) if not hold else None
         minimum = version_match.group(0) if version_match else ""
         packages.append(
