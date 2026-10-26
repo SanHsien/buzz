@@ -181,3 +181,56 @@ def test_no_workflow_pin_in_the_tree_gets_a_floor_from_its_sha() -> None:
         ref = row["requirement"].split("@", 1)[1]
         if re.fullmatch(r"[0-9a-f]{12}", ref):  # label of an uncommented SHA pin
             assert row["minimum"] == "", row
+
+
+def _hanging_run(*_args, **kwargs):
+    """A subprocess.run stand-in for a stalled network: it only returns if given a deadline."""
+    import subprocess
+
+    if kwargs.get("timeout") is None:
+        raise AssertionError("subprocess.run without a timeout would block until the job is killed")
+    raise subprocess.TimeoutExpired(_args[0], kwargs["timeout"])
+
+
+def test_a_stalled_git_call_is_reported_as_a_failed_check(monkeypatch, tmp_path: Path) -> None:
+    import pytest
+
+    monkeypatch.setattr(upstream.subprocess, "run", _hanging_run)
+    with pytest.raises(upstream.UpstreamCheckError, match="timed out"):
+        upstream.run_git(["fetch", "--quiet"], tmp_path)
+
+
+def test_a_stalled_gh_call_reads_as_not_checked_not_as_nothing_to_review(monkeypatch) -> None:
+    monkeypatch.setattr(upstream.subprocess, "run", _hanging_run)
+    baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 1}
+    assert upstream.collect_new_tickets(baseline, "pr") is None
+
+
+def test_a_missing_git_executable_is_reported_as_a_failed_check(monkeypatch, tmp_path: Path) -> None:
+    import pytest
+
+    def no_git(*_a, **_k):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(upstream.subprocess, "run", no_git)
+    with pytest.raises(upstream.UpstreamCheckError, match="git"):
+        upstream.run_git(["fetch"], tmp_path)
+
+
+def test_gh_failure_is_none_never_an_empty_list(monkeypatch) -> None:
+    """Pins the contract the report relies on: every way `gh` can fail is `None`."""
+    import subprocess
+
+    baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 1}
+
+    def failing(returncode: int, stdout: str):
+        return lambda *_a, **_k: subprocess.CompletedProcess([], returncode, stdout, "boom")
+
+    def missing(*_a, **_k):
+        raise FileNotFoundError("gh")
+
+    for fake in (failing(1, "[]"), failing(0, "not json"), missing):
+        monkeypatch.setattr(upstream.subprocess, "run", fake)
+        assert upstream.collect_new_tickets(baseline, "pr") is None
+    monkeypatch.setattr(upstream.subprocess, "run", failing(0, "[]"))
+    assert upstream.collect_new_tickets(baseline, "pr") == []

@@ -26,6 +26,10 @@ BASELINE_PATH = SCRIPT_DIR / "upstream_baseline.json"
 UPSTREAM_REF_PREFIX = "refs/upstream-check"
 DEFAULT_DECISION_LOG = "docs/fork/DECISIONS.md"
 TICKET_LIMIT = 1000
+# Seconds. A stalled network must end the call, not hold the job until the runner kills it
+# with no report written. The upstream history fetch is the slow one.
+GIT_TIMEOUT = 600
+GH_TIMEOUT = 120
 TRACK_MODES = ("release", "commit")
 _SEMVER_TAG_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 
@@ -93,14 +97,20 @@ def latest_upstream_release(baseline: dict, repo_dir: Path) -> tuple[str, str] |
 
 
 def run_git(args: list[str], repo_dir: Path) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=repo_dir,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=repo_dir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=GIT_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise UpstreamCheckError(f"git {' '.join(args)} timed out after {GIT_TIMEOUT}s") from exc
+    except OSError as exc:
+        raise UpstreamCheckError(f"cannot run git: {exc}") from exc
     if result.returncode != 0:
         raise UpstreamCheckError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout
@@ -234,8 +244,9 @@ def collect_new_tickets(baseline: dict, kind: str) -> list[dict] | None:
             # without it a single undecodable byte raises UnicodeDecodeError and
             # the whole upstream check dies instead of reporting what it read.
             errors="replace",
+            timeout=GH_TIMEOUT,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
     if result.returncode != 0:
         return None
