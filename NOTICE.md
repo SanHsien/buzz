@@ -12,4 +12,6 @@ Modifications and fork maintenance infrastructure by SanHsien:
 - Dependabot and CodeQL configuration (`.github/dependabot.yml`, `.github/workflows/codeql.yml`)
 - Fork documentation (`FORK.md`, `docs/fork/`)
 
-Product code is unmodified from upstream.
+The fork adds no product features. Its edits to upstream-owned files (CI workflow gates, lockfile
+dependency updates, `deny.toml` ignores, a test-only lock in `buzz-dev-mcp`) are listed in
+`FORK.md`.

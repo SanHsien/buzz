@@ -48,6 +48,9 @@ ignore = [
     # (via axum and nostr-sdk) still require ^0.26, and no patched 0.26 release
     # exists. Remove when those consumers move to webpki-roots 1.
     { id = "RUSTSEC-2026-0381", reason = "only webpki-roots 0.26.11 remains: a shim re-exporting the patched 1.0.10; required by tokio-tungstenite 0.28/0.29" },
+    # fork patch (SanHsien/buzz): the RUSTSEC-2026-0253 and RUSTSEC-2026-0387 ignores below are
+    # this fork's own (docs/fork/DECISIONS.md); on a sync conflict, upstream wins and these are
+    # re-evaluated.
     # lru 0.16.4 — LruCache::pop() is not panic-safe (unsound only when a stored key's Drop
     # panics under unwinding and the panic is caught with catch_unwind). Pulled in by
     # launchdarkly-server-sdk, which buzz-feature-flags pins exactly (=3.2.0) and requires lru ^0.16.

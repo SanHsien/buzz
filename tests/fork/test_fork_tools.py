@@ -355,3 +355,36 @@ def test_a_truncated_registry_response_is_a_failed_lookup_not_a_crash(monkeypatc
 
     monkeypatch.setattr(fresh.urllib.request, "urlopen", lambda *_a, **_k: Truncated())
     assert fresh._get_json("https://registry.npmjs.org/x/latest") is None
+
+
+FORK_PATCH_MARKER = "fork patch (SanHsien/buzz)"
+FORK_OWNED_DOCS = {"test_fork_tools.py", "FORK.md", "DECISIONS.md"}
+
+
+def _files_with_fork_patch_marker() -> list[str]:
+    import subprocess
+
+    result = subprocess.run(
+        ["git", "grep", "-lzF", FORK_PATCH_MARKER, "--", "."],
+        cwd=REPO_ROOT, capture_output=True, check=False,
+    )
+    names = result.stdout.decode("utf-8").split("\0")
+    return sorted(n for n in names if n and Path(n).name not in FORK_OWNED_DOCS)
+
+
+def test_every_file_carrying_a_fork_patch_marker_is_listed_in_fork_md() -> None:
+    """FORK.md's difference table is the only place a maintainer learns which upstream-owned
+    files the fork has edited; a patch that is not in it is invisible at the next sync."""
+    fork_md = (REPO_ROOT / "FORK.md").read_text(encoding="utf-8")
+    patched = _files_with_fork_patch_marker()
+    assert patched, "marker convention changed; update this test"
+    missing = [name for name in patched if name not in fork_md]
+    assert not missing, f"fork-patched files absent from FORK.md: {missing}"
+
+
+def test_deny_toml_marks_the_ignores_the_fork_added() -> None:
+    """Upstream owns deny.toml; the marker is what lets a sync tell its ignores from ours."""
+    text = (REPO_ROOT / "deny.toml").read_text(encoding="utf-8")
+    marker_at = text.index(FORK_PATCH_MARKER)
+    for advisory in ("RUSTSEC-2026-0253", "RUSTSEC-2026-0387"):
+        assert marker_at < text.index(f'id = "{advisory}"')
