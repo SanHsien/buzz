@@ -185,3 +185,14 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 ### 水位
 
 `tools/upstream_baseline.json`：`reviewed_through` → `209fcd21725b8728fed8b14dca1636018d175458`，`reviewed_pr_through` → 8610，`reviewed_issue_through` → 8597，`reviewed_date` → 2026-10-27。
+
+## 2026-10-27 把上游 `209fcd2` 併進產品碼
+
+上一節審查時產品碼只帶入 `d676c7b`（`3e0e7c8`），其餘 12 個 commit 明列為「隨同步合併」。本節是那次合併。fork 沒有壓縮過，與上游共同祖先是水位 `9e8c9fc`，所以用一般的 `git merge 209fcd2`（`--no-ff`），不是 cherry-pick。
+
+- **結果：零衝突。** `Cargo.lock` 自動合併，相對合併前只多兩行（`buzz-relay-mesh` 的 `metrics`、`metrics-util`，workspace 本來就有這兩個 crate）。上游這 13 個 commit 沒有動任何 fork 修補檔：`deny.toml`、`docker.yml`、`sprig.yml`、`sprig-image.yml`、`_ci-rust.yml`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`crates/buzz-dev-mcp`；`FORK.md` 表中帶 `fork patch` 標記的檔案合併前後 `git diff` 為空。唯一動到的 workflow 是 `_ci-relay.yml`（三行測試清單，fork 未改）。
+- **`d676c7b` 與 `3e0e7c8` 內容相同**，合併時沒有產生變動。
+- **驗證（本機，`cargo` 在 `~/.cargo/bin`）：** `cargo deny check` 四項 ok（唯一警告是上游自己的 `RUSTSEC-2026-0381` ignore「未命中」，合併前後鎖檔在該鏈沒有差異）；`cargo check --workspace --locked --exclude buzz-audio-client` 通過；`cargo metadata --locked` 對 `desktop/src-tauri` 通過，`cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories` 沒有 vulnerability／unsound 條目，只有上一節已記的 `unic-*`／`mach`／`proc-macro-error` unmaintained。`buzz-audio-client` 排除的原因：它依賴 `opus` → `opusic-sys`，build script 需要 `cmake`，本機沒有（工作區內沒有其他 crate 依賴它，與本次合併無關；交給 CI）。未跑 Rust 測試（push-gateway 的測試依賴 vendored OpenSSL，本機建不起來；其餘交給 CI）。
+- **新鮮度：** 合併前後的報告逐位元組相同（無新增列、無新的 `REVIEW UPDATE`）。`metrics` 系列在 workspace 本來就有宣告，狀態 OK。
+- **上游已經又前進：** 審查與本合併都停在 `209fcd2`；唯讀 `ls-remote` 看到上游 `main` 目前是 `a38fedb`。水位**維持** `209fcd2`，之後的 commit 由下次 `upstream-check` 列出。
+- **建議：** 推送後看 CI，出現的新紅燈（尤其 Desktop Tauri、Rust、Docker／Qualify relay image）要與上一節記的「上游 `0e36dbc` 的 check runs」基準（Desktop Tauri 的 apt-get 步驟、Qualify relay image source 已紅）比對再歸因。
