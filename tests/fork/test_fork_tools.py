@@ -234,3 +234,57 @@ def test_gh_failure_is_none_never_an_empty_list(monkeypatch) -> None:
         assert upstream.collect_new_tickets(baseline, "pr") is None
     monkeypatch.setattr(upstream.subprocess, "run", failing(0, "[]"))
     assert upstream.collect_new_tickets(baseline, "pr") == []
+
+
+def _narrow_stdout(monkeypatch):
+    """A stdout whose codec cannot encode the Chinese and emoji the reports contain."""
+    import io
+
+    wrapper = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+    monkeypatch.setattr(sys, "stdout", wrapper)
+    return wrapper
+
+
+def test_upstream_check_survives_a_stdout_that_cannot_encode_the_report(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Exit 1 means "upstream moved, review it"; a UnicodeEncodeError from `print` exits 1 too."""
+    baseline = {
+        "repo": "https://github.com/block/buzz.git",
+        "branch": "main",
+        "reviewed_through": "a" * 40,
+        "reviewed_date": "2026-10-26",
+        "track": "commit",
+    }
+    status = {"baseline": "aaaaaaa", "fork_head": "bbbbbbb", "upstream_tip": "ccccccc",
+              "ahead": 1, "behind": 0}
+    monkeypatch.setattr(upstream, "load_baseline", lambda: baseline)
+    monkeypatch.setattr(upstream, "fetch_upstream", lambda *_a: "refs/upstream-check/main")
+    monkeypatch.setattr(upstream, "collect_new_commits", lambda *_a: [])
+    monkeypatch.setattr(upstream, "fork_status", lambda *_a: status)
+    monkeypatch.setattr(
+        upstream, "collect_new_tickets", lambda *_a: [{"number": 9, "title": "launch \U0001f680"}]
+    )
+    report = tmp_path / "report.md"
+    monkeypatch.setattr(
+        sys, "argv", ["x", "--output", str(report), "--repo-dir", str(tmp_path)]
+    )
+    _narrow_stdout(monkeypatch)
+    assert upstream.main() == 0
+    assert "\U0001f680" in report.read_text(encoding="utf-8")  # the file is the faithful copy
+
+
+def test_freshness_check_survives_a_stdout_that_cannot_encode_the_report(
+    monkeypatch, tmp_path: Path
+) -> None:
+    row = {
+        "name": "pkg", "source": "package.json", "requirement": "pkg@1", "latest": "2.0.0",
+        "hold": "keep 不升級 \U0001f680", "outdated": True, "check_failed": False,
+        "no_floor": False, "deferred_reason": "", "minimum": "1", "kind": "npm",
+    }
+    monkeypatch.setattr(fresh, "collect_sections", lambda *_a: {"npm": [row]})
+    report = tmp_path / "report.md"
+    monkeypatch.setattr(sys, "argv", ["x", "--output", str(report)])
+    _narrow_stdout(monkeypatch)
+    assert fresh.main() == 0
+    assert "\U0001f680" in report.read_text(encoding="utf-8")

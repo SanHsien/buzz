@@ -18,6 +18,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -405,7 +406,19 @@ def render_markdown(
     return "\n".join(lines)
 
 
+def _tolerate_unencodable_output() -> None:
+    """The report file is UTF-8; the console may not be (cp1252/cp950 on Windows).
+
+    An ``UnicodeEncodeError`` from ``print`` after the file is written exits 1, which
+    reads as "review needed". Degrade the console copy to ``?`` instead.
+    """
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(errors="replace")
+
+
 def main() -> int:
+    _tolerate_unencodable_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="upstream-review-report.md")
     parser.add_argument("--repo-dir", type=Path, default=REPO_ROOT)
