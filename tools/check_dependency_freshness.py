@@ -133,6 +133,21 @@ def is_newer_version(latest: str, declared: str) -> bool:
     return padded[:depth] > declared_key
 
 
+def has_passed_release(latest: str, reviewed: str) -> bool:
+    """Is `latest` strictly after `reviewed`, comparing every segment either one writes?
+
+    Unlike ``is_newer_version`` this does not truncate to `reviewed`'s precision: a deferral
+    recorded as ``1.13`` expires at ``1.13.4``, as the module docstring promises.
+    """
+    latest_key, reviewed_key = release_key(latest), release_key(reviewed)
+    if latest_key is None or reviewed_key is None:
+        return False
+    width = max(len(latest_key), len(reviewed_key))
+    return latest_key + (0,) * (width - len(latest_key)) > reviewed_key + (0,) * (
+        width - len(reviewed_key)
+    )
+
+
 def range_floor(spec: str, bare_is_caret: bool) -> str:
     """The floor a npm or Cargo version range commits to, truncated to its precision.
 
@@ -531,7 +546,8 @@ def load_deferrals(path: Path = DEFERRALS_PATH) -> dict[str, tuple[str, str]]:
             continue
         latest = str(entry.get("deferredLatest", "")).strip()
         reason = str(entry.get("reason", "")).strip()
-        if latest and reason:
+        # A release that cannot be parsed could never be passed: it would defer forever.
+        if latest and reason and release_key(latest) is not None:
             deferrals[name.lower()] = (latest, reason)
     return deferrals
 
@@ -560,7 +576,7 @@ def collect_status(
             continue
         latest = fetch(package["name"])
         reviewed, reason = deferrals.get(package["name"].lower(), ("", ""))
-        deferred = bool(reviewed and latest and not is_newer_version(latest, reviewed))
+        deferred = bool(reviewed and latest and not has_passed_release(latest, reviewed))
         rows.append(
             {
                 **package,

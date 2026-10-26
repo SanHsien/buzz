@@ -288,3 +288,37 @@ def test_freshness_check_survives_a_stdout_that_cannot_encode_the_report(
     _narrow_stdout(monkeypatch)
     assert fresh.main() == 0
     assert "\U0001f680" in report.read_text(encoding="utf-8")
+
+
+def _row_for(name: str, minimum: str, latest: str, deferrals: dict) -> dict:
+    package = {
+        "name": name, "minimum": minimum, "requirement": f"{name}@{minimum}",
+        "source": "x", "hold": "", "kind": "npm",
+    }
+    return fresh.collect_status([package], lambda _n: latest, deferrals)[0]
+
+
+def test_a_deferral_expires_once_the_registry_passes_the_reviewed_release() -> None:
+    """The documented rule is "passes that release", whatever precision it was written at:
+    a deferral recorded as `1.13` must not survive `1.13.4`."""
+    deferrals = {"pkg": ("1.13", "not this month")}
+    assert _row_for("pkg", "1.1", "1.13", deferrals)["deferred_reason"] == "not this month"
+    expired = _row_for("pkg", "1.1", "1.13.4", deferrals)
+    assert expired["deferred_reason"] == ""
+    assert fresh.needs_review(expired)
+
+
+def test_a_deferral_whose_release_cannot_be_read_is_ignored_not_permanent(tmp_path: Path) -> None:
+    path = tmp_path / "deferrals.json"
+    path.write_text(
+        json.dumps(
+            {
+                "deferrals": {
+                    "good": {"deferredLatest": "1.2.3", "reason": "r"},
+                    "forever": {"deferredLatest": "latest", "reason": "r"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert set(fresh.load_deferrals(path)) == {"good"}
