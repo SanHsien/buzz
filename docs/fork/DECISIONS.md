@@ -39,9 +39,9 @@ Dependabot alerts 與自動安全更新在 fork 預設關閉（API 404／disable
 
 | workflow／job | 結果 | 判讀 | 處理 |
 | --- | --- | --- | --- |
-| CI／Security Domain（`cargo deny`） | 失敗 | 新公告 RUSTSEC-2026-0387：`crypto-bigint 0.5.5` 時間變異（建議升 0.7.6，跨大版）。公告晚於 fork 點，上游同一份 `Cargo.lock` 也會紅。 | 等上游修；沒有 cargo 工具鏈可驗證跨大版升級，不在 lock 手改。觸發：上游 commit 出現 `crypto-bigint` 升版時帶入並重跑；或 Dependabot 安全更新 PR 在 CI 綠時合併。 |
+| CI／Security Domain（`cargo deny`） | 失敗 | 新公告 RUSTSEC-2026-0387：`crypto-bigint 0.5.5` 時間變異（建議升 0.7.6，跨大版）。公告（2026-10-23 通報、10-24 收錄）晚於 fork 點與上游同 SHA 的綠燈，上游同一份 `Cargo.lock` 預期也會紅（上游公告後尚無新 CI run，未實證）。 | 依賴鏈 `buzz-push-gateway` → `p256 0.13.2` → `elliptic-curve`／`ecdsa`／`primeorder` → `crypto-bigint 0.5.5`；升到 0.7.x 要在 Manifest 升 p256 大版並可能改 push-gateway API，`cargo update -p` 做不到，本機也沒有 cargo 工具鏈可驗證。替代做法是在 `deny.toml` 加帶理由的 ignore（上游處理 RUSTSEC-2026-0381 的方式），需維護者決定。觸發：上游升 p256 時帶入並重跑。 |
 | CI／Windows Rust | 取消（45 分鐘逾時） | fork 沒有暖快取，冷編譯 workspace＋Tauri 超過上游設定的 45 分鐘；快取只在成功後才存，所以不會自己好。 | 不改上游 workflow。觸發：上游調整逾時或快取策略；或在本機驗證後手動重跑。 |
-| Docker image | 失敗 | 推送目標寫死 `ghcr.io/block/buzz-*`（上游組織，fork 沒有權限）；另一關要求同 SHA 的 CI 成功。 | 預期紅，無法在 fork 修。不停用 workflow。 |
+| Docker image | 失敗 | 推送目標寫死上游組織的 `ghcr.io/block/buzz`（relay 映像）與 `ghcr.io/block/buzz-push-gateway`，fork 沒有權限（permission_denied）；另一關要求同 SHA 的 CI 成功。 | 預期紅，無法在 fork 修。不停用 workflow。 |
 | Sprig | 失敗 | 「Update rolling release」對不存在的 `sprig-latest` release 執行 `gh release edit`（上游事先手動建立）。 | 建立 release 屬於公開發佈，需維護者決定；未建立。 |
 | Dependabot 更新（vitest、markdown-it） | 失敗 | Dependabot 更新器內部錯誤（無法讀細節）；vite、zod 已成功開出 PR #1、#2。 | 觀察；PR 在 CI 綠且審查後才合併。 |
 
