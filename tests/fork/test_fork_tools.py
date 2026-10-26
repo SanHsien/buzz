@@ -341,3 +341,17 @@ def test_cargo_member_globs_are_expanded_not_silently_dropped(tmp_path: Path) ->
         "crates/b/Cargo.toml",
         "tools/one/Cargo.toml",
     )
+
+
+def test_a_truncated_registry_response_is_a_failed_lookup_not_a_crash(monkeypatch) -> None:
+    """`response.read()` raises http.client.IncompleteRead (not an OSError) on a cut-off body;
+    it must become one CHECK FAILED row instead of aborting the whole report."""
+    import http.client
+    import io
+
+    class Truncated(io.BytesIO):
+        def read(self, *_a):
+            raise http.client.IncompleteRead(b"{", 100)
+
+    monkeypatch.setattr(fresh.urllib.request, "urlopen", lambda *_a, **_k: Truncated())
+    assert fresh._get_json("https://registry.npmjs.org/x/latest") is None
