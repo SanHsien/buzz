@@ -61,10 +61,10 @@ NPM_MANIFESTS: tuple[str, ...] = (
 # version lives in `[workspace.dependencies]`) and the Tauri crate the root excludes. Pub
 # (mobile), Gradle and SwiftPM declarations are not read: no checker here, see
 # docs/fork/DECISIONS.md.
-def _cargo_manifests() -> tuple[str, ...]:
+def _cargo_manifests(root: Path = REPO_ROOT) -> tuple[str, ...]:
     found: list[str] = []
     for workspace_root in ("", "desktop/src-tauri/"):
-        manifest = REPO_ROOT / f"{workspace_root}Cargo.toml"
+        manifest = root / f"{workspace_root}Cargo.toml"
         if not manifest.is_file():
             continue
         found.append(f"{workspace_root}Cargo.toml")
@@ -72,8 +72,16 @@ def _cargo_manifests() -> tuple[str, ...]:
             data = tomllib.loads(manifest.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        for member in data.get("workspace", {}).get("members", []):
-            found.append(f"{workspace_root}{member}/Cargo.toml")
+        workspace = data.get("workspace", {})
+        excluded = {Path(item).as_posix() for item in workspace.get("exclude", [])}
+        base = root / workspace_root
+        for member in workspace.get("members", []):
+            # A member is a path or a glob (`crates/*`); read literally, a glob would name no file
+            # and its crates would silently drop out of the report.
+            for path in sorted(base.glob(f"{member}/Cargo.toml")):
+                relative = path.parent.relative_to(base).as_posix()
+                if relative not in excluded:
+                    found.append(f"{workspace_root}{relative}/Cargo.toml")
     return tuple(dict.fromkeys(found))
 
 

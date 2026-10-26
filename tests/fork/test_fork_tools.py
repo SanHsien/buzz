@@ -322,3 +322,22 @@ def test_a_deferral_whose_release_cannot_be_read_is_ignored_not_permanent(tmp_pa
         encoding="utf-8",
     )
     assert set(fresh.load_deferrals(path)) == {"good"}
+
+
+def test_cargo_member_globs_are_expanded_not_silently_dropped(tmp_path: Path) -> None:
+    """`members = ["crates/*"]` names no file; read literally it contributes zero manifests and
+    the report stays green over crates it never looked at."""
+    (tmp_path / "Cargo.toml").write_text(
+        '[workspace]\nmembers = ["crates/*", "tools/one"]\nexclude = ["crates/skipped"]\n',
+        encoding="utf-8",
+    )
+    for member in ("crates/a", "crates/b", "crates/skipped", "tools/one"):
+        (tmp_path / member).mkdir(parents=True)
+        (tmp_path / member / "Cargo.toml").write_text("[package]\nname='x'\n", encoding="utf-8")
+    (tmp_path / "crates" / "not-a-crate").mkdir()
+    assert fresh._cargo_manifests(tmp_path) == (
+        "Cargo.toml",
+        "crates/a/Cargo.toml",
+        "crates/b/Cargo.toml",
+        "tools/one/Cargo.toml",
+    )
