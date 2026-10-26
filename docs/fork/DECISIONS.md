@@ -157,7 +157,7 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 
 ### PR 軸（16 筆新項目；15 筆 open，#8608 已合併成 `209fcd2`，無已關閉未合併）
 
-全部：**不引進，未合併前不審內容細節，上游合併後經 commit 軸審查**（同 #8593 的做法）；PR 水位推進到 8608。每筆已取**目前** head 並掃描 diff（掃描方式同上；`+` 前綴加縮排造成的「長空白」誤判已排除）：
+全部：**不引進，未合併前不審內容細節，上游合併後經 commit 軸審查**（同 #8593 的做法）；PR 水位推進到 8610。每筆取**審查當時**的 head 並掃描 diff（表中 head 是審查時的值；之後被 force-push 的見各列註記）（掃描方式同上；`+` 前綴加縮排造成的「長空白」誤判已排除）：
 
 | PR | head | 規模 | 隱藏內容 | 與 fork 的關係 |
 | --- | --- | --- | --- | --- |
@@ -165,7 +165,7 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 | #8595 invites 走原生網路 | `3ed2df1` | 8 檔 +164/−137 | 無（`globalThis.window` 僅在 `invites.test.mjs` 當測試替身） | desktop |
 | #8596 影片縮小再上傳 | `daff931` | 1 檔 +105/−12 | 無 | desktop |
 | #8598 Rust 1.98.1（macOS 27） | `8b28f5f` | 29 檔 +85/−73 | 無 | **動 `_ci-rust.yml`、`release.yml`、`windows-canary.yml`、Dockerfile**：與 fork 的 `_ci-rust.yml` Windows 逾時修補同檔。觸發：上游合併時重驗該逾時修補是否還在、`docker.yml` 守衛是否衝突 |
-| #8599 mobile QR 優先 onboarding | `37194be` | 13 檔 +563/−263 | 無 | mobile。**審查期間 head 換了三次：`0a4d964`（12 檔 +302/−101）→ `12c7d59`（13 檔 +563/−263）→ `37194be`（同規模）**；三個版本都掃過、沒有隱藏內容，以最後的 head 為準 |
+| #8599 mobile QR 優先 onboarding | `37194be` | 13 檔 +563/−263 | 無 | mobile。**審查期間 head 換了三次：`0a4d964`（12 檔 +302/−101）→ `12c7d59`（13 檔 +563/−263）→ `37194be`（同規模）**；三個版本都掃過、沒有隱藏內容，以最後的 head 為準。主管覆核時（2026-10-27）head 已再換成 `86e250a`，未掃；不引進，上游合併後經 commit 軸審查 |
 | #8600 draft：邀請同意移出瀏覽器 | `32767f9` | 2 檔 +60/−47 | 無 | web |
 | #8601 邀請 handoff 的原生同意 | `a1d1703` | 16 檔 +848/−135 | 無（`globalThis.fetch`／`__TAURI_INTERNALS__` 僅在 `useClaimInvite.jsdom-test.mjs` 當測試替身） | desktop |
 | #8602 專案卡片可刪 repository（#8597） | `810b5a3` | 9 檔 +527/−24 | 無 | desktop；對應下方 issue #8597 |
@@ -176,7 +176,7 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 | #8607 mobile 批次初始已讀種子 | `6a232ed` | 6 檔 +221/−61 | 無 | mobile |
 | #8608 mobile 忽略不相干的靜音設定 | `69a6df7` | 2 檔 +22/−4 | 無 | mobile；**已合併為 `209fcd2`**，見 commit 軸 |
 | #8609 push：跨版本接受正規 channel UUID | `0f5acd4` | 9 檔 +156/−10 | 無（最長新增行是 `NIP-PL.md` 表格） | relay／mobile |
-| #8610 draft：把 push 設定失敗與 app 渲染隔離 | `e9a1068` | 8 檔 +573/−47 | 無 | mobile |
+| #8610 draft：把 push 設定失敗與 app 渲染隔離 | `e9a1068` | 8 檔 +573/−47 | 無 | mobile。主管覆核時（2026-10-27）head 已換成 `629c2c6`，未掃；不引進，上游合併後經 commit 軸審查 |
 
 ### Issue 軸（1 筆新項目）
 
