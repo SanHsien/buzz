@@ -75,6 +75,6 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 
 刻意不處理（附理由與觸發條件）：
 - **`@tiptap/*`＋`prosemirror-*` 家族**（`@tiptap/core`、`prosemirror-view` 告警）：整個家族升到 3.32.0 會讓 5 個連結貼上測試失敗（`composerLinkPastePipeline.test.mjs`：「expected Link's onCreate to register the buzz protocol with linkify」），需要改產品碼；只升單一套件則 `prosemirror-model` 出現兩份型別而 `tsc` 失敗。觸發：上游自己升 tiptap 時帶入。
-- **`rmcp`**（high／medium，`crates/buzz-agent/Cargo.toml`）：修補版是 2.x，lock 內是 1.8.0（宣告 `rmcp = "1"`），需要跨大版與 API 改動。觸發：上游升 rmcp。
+- **`rmcp`**（high／medium）：有漏洞的 1.8.0 來自 `crates/buzz-agent/Cargo.toml` 自己宣告的 `rmcp = { version = "1", ... }`（兩份 lock 都有）；根目錄 `[workspace.dependencies]` 裡的 `rmcp` 沒有任何 crate 繼承。修補版是 2.x／3.x，要把 buzz-agent 的 client／transport-child-process 用法遷移到 3.x（產品碼 API 變動）。Dependabot PR #3（只改那行沒人用的 workspace 宣告與 Tauri lock 的 Windows 依賴指向）因此關閉，並未修掉告警。觸發：上游遷移 buzz-agent 到 rmcp 3.x。
 - **`glib` 0.18.5**（Tauri lock，medium）：修補版 0.20.0，被 gtk3-rs 一整組擋住；觸發：Tauri／gtk 升版。
 - **`@vitest/mocker`**、**`postcss-selector-parser`**：目前可解析的版本低於告警的修補版（受 pnpm 發佈時間政策或相依範圍限制），隔日重跑 `pnpm update` 再試；已在報告列出。
