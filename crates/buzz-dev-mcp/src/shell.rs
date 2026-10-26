@@ -977,6 +977,16 @@ fn rotate_artifacts(state: &SharedState, new_path: PathBuf) {
     }
 }
 
+/// Process-global env guard for tests. `SharedState::new` resolves the shell
+/// from `BUZZ_SHELL`, `GIT_BASH`, and `SystemRoot`, and the Windows resolver
+/// tests mutate those vars. Every test that builds a `SharedState` or touches
+/// those vars must hold this lock, or parallel threads race on them.
+#[cfg(test)]
+pub(crate) fn lock_shell_env() -> std::sync::MutexGuard<'static, ()> {
+    static SHELL_ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    SHELL_ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -986,6 +996,7 @@ mod tests {
 
     fn make_state(cwd: &std::path::Path) -> SharedState {
         let shim = Shim::install().expect("shim install");
+        let _env = lock_shell_env();
         SharedState::new(cwd.to_path_buf(), shim).expect("state new")
     }
 
@@ -1145,13 +1156,7 @@ mod tests {
 mod windows_resolver_tests {
     use super::*;
     use std::env;
-    use std::sync::Mutex;
     use tempfile::tempdir;
-
-    // Process-global env mutation guard: tests that mutate BUZZ_SHELL,
-    // SystemRoot, or GIT_BASH must hold this lock for the duration of the
-    // test so parallel test threads cannot race on these env vars.
-    static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     fn touch(path: &Path) {
         if let Some(parent) = path.parent() {
@@ -1162,7 +1167,7 @@ mod windows_resolver_tests {
 
     #[test]
     fn buzz_shell_override_wins_over_everything() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         // BUZZ_SHELL pointing at a real file must be returned without probing
         // the standard Git-for-Windows locations or PATH.
         let dir = tempdir().expect("tempdir");
@@ -1178,7 +1183,7 @@ mod windows_resolver_tests {
 
     #[test]
     fn buzz_shell_override_skipped_when_path_absent() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         // If BUZZ_SHELL points at a non-existent path the resolver must fall
         // through rather than returning a dead path.
         env::set_var("BUZZ_SHELL", r"C:\does\not\exist\bash.exe");
@@ -1200,7 +1205,7 @@ mod windows_resolver_tests {
     /// exclusion — cmd/pwsh live in System32 legitimately.
     #[test]
     fn buzz_shell_explicit_bare_name_resolves_from_system32() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         // Simulate cmd.exe living in a dir that would be excluded by the WSL guard.
         // The explicit BUZZ_SHELL branch must NOT skip System32.
         let sys32 = tempdir().expect("sys32");
@@ -1232,7 +1237,7 @@ mod windows_resolver_tests {
     /// Implicit bash.exe scan still skips System32 (WSL guard intact).
     #[test]
     fn implicit_bash_scan_still_skips_system32() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         // Same setup: bash.exe is only in a dir that is under SystemRoot.
         // Without an explicit BUZZ_SHELL, the fallback scan must skip it.
         let sys32 = tempdir().expect("sys32");
@@ -1272,7 +1277,7 @@ mod windows_resolver_tests {
     /// resolved_shell whose display name appears in bootstrap_instructions.
     #[test]
     fn shared_state_bootstrap_hint_matches_resolved_shell() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         let dir = tempdir().expect("tempdir");
         let fake_pwsh = dir.path().join("pwsh.exe");
         touch(&fake_pwsh);
@@ -1295,7 +1300,7 @@ mod windows_resolver_tests {
     /// When pwsh.exe is on PATH, resolve_bash must return it and report "pwsh".
     #[test]
     fn buzz_shell_bare_name_resolved_through_path_when_present() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         let dir = tempdir().expect("tempdir");
         let fake_pwsh = dir.path().join("pwsh.exe");
         touch(&fake_pwsh);
@@ -1314,7 +1319,7 @@ mod windows_resolver_tests {
     /// report pwsh as the active shell.
     #[test]
     fn buzz_shell_bare_name_absent_from_path_falls_through() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         // Set BUZZ_SHELL to a command that won't be on any real PATH.
         env::set_var("BUZZ_SHELL", "buzz-shell-does-not-exist-xyz");
         let result = resolve_bash("");
@@ -1335,7 +1340,7 @@ mod windows_resolver_tests {
 
     #[test]
     fn git_cmd_on_path_resolves_sibling_git_bash() {
-        let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
+        let _guard = lock_shell_env();
         let dir = tempdir().expect("tempdir");
         let git = dir.path().join("Git").join("cmd").join("git.exe");
         let bash = dir.path().join("Git").join("bin").join("bash.exe");

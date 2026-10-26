@@ -73,6 +73,7 @@ mod tests {
 
     fn make_state(cwd: &std::path::Path) -> SharedState {
         let shim = crate::shim::Shim::install().expect("shim install");
+        let _env = crate::shell::lock_shell_env();
         SharedState::new(cwd.to_path_buf(), shim).expect("state new")
     }
 
