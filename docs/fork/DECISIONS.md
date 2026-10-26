@@ -63,3 +63,18 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 6. **Desktop Tauri (mesh) 的「Install Tauri dependencies (Linux)」失敗**：該步驟是 `apt-get install`（有重試腳本），日誌取不到錯誤細節，推測為套件鏡像暫時性問題（未證實），已重跑失敗的 job 一次確認；結果見下方。
 7. **`_ci-rust.yml` 的 Windows Rust 逾時**：非 `block` owner 時 45 → 90 分鐘。fork 沒有暖快取，冷編譯 workspace＋Tauri 在 `2ab160a`、`6b9d953` 兩次於 45 分鐘被取消；`block` owner 維持 45。
 8. **Desktop Smoke E2E 的兩個測試（`video-attachment.spec.ts:1469`、`voice-note.spec.ts:906`）在 `6b9d953` 失敗**：`8398c4e` 的 CI 這兩個測試通過（該次失敗的只有 Tauri 依賴安裝與其彙總 job），且 `8398c4e` 到 `6b9d953` 之間沒有產品碼差異（只動 workflow 與文件）；`abc369f` 亦曾通過，但 `abc369f` 之後的 `8398c4e` 有 `Cargo.lock` 更新（tokio、lru 等），所以不能以此證明與 lock 更新無關。判斷為共用 runner 負載下的逾時型不穩定（當時同時有兩個 Dependabot PR 的 CI 在跑），已重跑失敗 job 一次，結果見下方；若反覆失敗再視為真問題處理。
+
+## 2026-10-26 Dependabot 安全告警（第一批：相容的鎖檔更新）
+
+開啟 Dependabot alerts 後 fork 顯示約 50 組告警（上游遺留，產品碼與上游相同）。原則：只用工具產生的鎖檔更新（`cargo update -p`、`pnpm update --lockfile-only`、`uv lock --upgrade-package`），**不調高任何 `package.json`／`Cargo.toml`／`pyproject.toml` 的宣告下限**；pnpm 不覆寫內建的 `minimumReleaseAge` 預設（repo 沒有另行設定；Renovate 的 3 天政策不適用於手動 `pnpm update`，其中 seroval 1.7.2、baseline-browser-mapping 2.11.32 發佈未滿 3 天）。
+
+已處理：
+- **Rust**（兩份 lock 都有 `hickory-resolver`／`hickory-proto`／`hickory-net` 0.26.1→0.26.3；`xxhash-rust` 0.8.15→0.8.19、`cmov` 0.5.3→0.5.4 只在根目錄 `Cargo.lock`）。重新解析也把 Windows 專用的 `windows-sys` 等依賴改指到 lock 內已有的版本。`cargo deny check` 四項 ok；`cargo check -p buzz-relay -p buzz-relay-mesh -p buzz-push-gateway -p buzz-agent -p buzz-acp -p buzz-core --locked` 通過。Tauri 端沒有本機編譯，交給 CI 的 Desktop Tauri。
+- **npm**（`pnpm-lock.yaml`）：`markdown-it` 14.3.3、`seroval` 1.7.2、`vite` 8.3.5、`zod` 4.6.7、`nanoid` 3.3.20、`postcss` 8.5.31、`browserslist` 4.29.4、`baseline-browser-mapping`、`@babel/core` 7.29.7；vite 8.0→8.3 是 minor 升級，連帶 rolldown 1.0→1.2、新增 lightningcss 與其平台套件，實際打包行為會變，以 CI 的 build／E2E 為準。`pnpm install --frozen-lockfile` 與 `pnpm typecheck`、`pnpm check` 通過；desktop 單元測試 6833/6834，唯一失敗的 `useDocumentVisible.test.mjs`「focused polling pauses on blur…」在更新前的 lock 上同樣失敗（本機 Windows 環境），與本次無關。推送後待辦：確認 Dependabot PR #1（vite）、#2（zod）被取代後關閉。
+- **pip**（`benchmarks/harbor-buzz-orchestra/uv.lock`、`benchmarks/harbor-buzz-orchestra/testbed/uv.lock`，約 20 組告警含 3 個 critical：PyJWT、anyio、certifi）：**本批不處理**。上游鎖檔的來源全指向 Block 內部 Artifactory（`global.block-artifacts.com`），fork 無法使用；`uv lock` 會把所有套件來源整批改成 `pypi.org` 並重寫約 3.5k 行（實測），之後每次同步上游這兩個檔案都會全檔衝突，而且 litellm 會一次跳到發佈才一天的 1.106.4（連帶新增 boto3 等相依）。這兩個目錄是 benchmark 工具、不隨產品發行；CI 的 `benchmark-harbor.yml` 只在 `benchmarks/harbor-buzz-orchestra/**` 變更時觸發，且以 `pip install -e ".[dev]"` 依 `pyproject.toml` 解析、不讀 `uv.lock`。告警的實際暴露面只剩有人在本機用這兩份 lock 跑 `uv sync`，而鎖檔指向的內部 Artifactory 對 fork 本來就連不上。觸發條件：維護者要實際執行 benchmark 時，或決定接受來源改用 pypi.org 並以 `--upgrade-package '<pkg>==<最低修補版>'` 逐一鎖到修補版（litellm 等滿 3 天）。
+
+刻意不處理（附理由與觸發條件）：
+- **`@tiptap/*`＋`prosemirror-*` 家族**（`@tiptap/core`、`prosemirror-view` 告警）：整個家族升到 3.32.0 會讓 5 個連結貼上測試失敗（`composerLinkPastePipeline.test.mjs`：「expected Link's onCreate to register the buzz protocol with linkify」），需要改產品碼；只升單一套件則 `prosemirror-model` 出現兩份型別而 `tsc` 失敗。觸發：上游自己升 tiptap 時帶入。
+- **`rmcp`**（high／medium，`crates/buzz-agent/Cargo.toml`）：修補版是 2.x，lock 內是 1.8.0（宣告 `rmcp = "1"`），需要跨大版與 API 改動。觸發：上游升 rmcp。
+- **`glib` 0.18.5**（Tauri lock，medium）：修補版 0.20.0，被 gtk3-rs 一整組擋住；觸發：Tauri／gtk 升版。
+- **`@vitest/mocker`**、**`postcss-selector-parser`**：目前可解析的版本低於告警的修補版（受 pnpm 發佈時間政策或相依範圍限制），隔日重跑 `pnpm update` 再試；已在報告列出。
