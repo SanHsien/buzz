@@ -109,3 +109,79 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 - **Tauri 鎖檔沒有任何 CI 的安全掃描**（Dependabot 只對有 GHSA 的告警開單）。同一個 `cargo deny` 掃 Tauri 鎖檔還會報 `unic-*`、`mach`、`proc-macro-error` 的 unmaintained。要讓 CI 掃它需要另一份帶 ignore 的設定，屬於上游 CI 結構。觸發：維護者要 Tauri 鎖檔進 CI，或下次同步上游時順手重跑上面那條指令。
 - **`str_replace.rs`、`view_image.rs` 的測試 `make_state` 沒拿 `lock_shell_env()`**（`e3561ee` 只補了 `shell.rs`、`read_file.rs`）。它們不依賴 shell 解析結果，沒有已知失敗。觸發：這兩處的測試在 Windows 出現不穩定。
 - **`helm-chart.yml`（`chart-v*` tag）、`push-gateway-helm-chart.yml`（`push-chart-v*` tag）、`staging-dev-relay-image.yml`（手動）沒有 owner 守衛**，在 fork 推 tag 或手動觸發會嘗試推 `ghcr.io/block/*`，結果是權限失敗（紅燈）而不是發佈。fork 不推這些 tag。觸發：fork 開始推 tag，或需要這些 workflow 轉綠。
+
+## 2026-10-27 `10aedc7` 兩條紅燈的原因與處理
+
+### Dependency freshness
+
+本機重現（`GH_TOKEN=… python tools/check_dependency_freshness.py`）與 CI 日誌一致：報告裡**只有一列**需要處理（`REVIEW UPDATE`），另有四列 `NO FLOOR`（未註解的 SHA pin，設計上不比較，不算紅燈）。深度掃描修的兩件事（全精度過期比較、SHA 不當下限）沒有讓被遮住的項目浮出來：
+
+- **`openai/codex-action` 沒有過期。** 宣告 `v1.12`，延後 `1.13`；該 repo 的 tag 最新就是 `v1.13`（沒有 `v1.13.x` tag，`releases/latest` 也是 404），registry 沒有超過延後的版本，狀態維持 `DEFERRED at 1.13`。
+- **唯一的 `REVIEW UPDATE`：`taiki-e/install-action`**（`v2.79.15`，`_ci-relay.yml`／`_ci-rust.yml`／`sprig.yml` 共六處）。10-26 的延後停在 2.87.31，2.87.32（10-26T15:24Z）發佈後自動過期——這是機制照設計運作，不是新缺陷。
+  - **沒有升級。** 六處 pin 是上游持有，上游 `main`（`0e36dbc`）仍是同一個 SHA `0fd4636…`；`v2.79.15…v2.87.32` 之間 914 個 commit，動到 `action.yml`、`main.sh`，而 workflow 要的是精確版本工具（`cargo-nextest@0.9.136`、`cross@0.2.5`），只有推送後 fork 自己的 CI 跑得出來，本機無法驗證。改 `tool` 以外的上游 workflow 檔也會與上游下一次 bump 衝突。
+  - **做法：** `deferredLatest` 改 2.87.32，理由寫明為什麼不升與觸發條件（上游 bump 時隨同步帶入；或 fork 開始自己維護 CI workflow）。該 action 約每 2–5 天一個 patch（v2.87.x 已 33 版），這個條目還會再過期；每次過期是「重新追問」，不是新決定。下限沒有調高。
+- **第二個紅燈來源：開著的 Dependabot PR #5。** `dependency-freshness.yml` 把「有任何開著的 Dependabot PR」當作需要處理。#5 是 `certifi 2026.6.17 → 2026.10.18`，只改 `benchmarks/harbor-buzz-orchestra/testbed/uv.lock`，**+1672/−1672**，其中 1645 行是把來源從 `global.block-artifacts.com` 改成 `pypi.org`——正是 2026-10-26「維護者決定」第 1 條拒絕的整批重寫（`revision` 也從 3 變 5）。依該決定**不合併**；PR 應以註明該決定的留言關閉。關閉是對 fork 遠端的寫入，本輪未做（見回報）。注意：只要 pip 告警還在、自動安全更新開著，Dependabot 之後可能針對同一份鎖檔再開別的套件的 PR，紅燈會再出現；要根治需維護者決定：關掉 uv 的自動安全更新，或接受鎖檔來源改成 pypi.org（原決定的觸發條件）。
+
+### Upstream check
+
+- 首次失敗的 run（attempt 1）報告是「12 commits＋PR／issue **未檢查**」——`gh` 在 runner 上列舉失敗，`collect_new_tickets` 回 `None`，工具照設計報「未檢查」而不是「無新項目」。同一個 commit 重跑（attempt 2）PR／issue 都列舉成功（14 筆 PR、1 筆 issue）；本機兩個 `gh … list --limit 1000` 各約 7 秒、都成功。判斷為 runner 上的暫時性 `gh` 失敗（原因未知：`gh` 的 stderr 沒被保留）。觸發條件：再發生一次就讓工具把 `gh` 的 stderr 寫進報告。
+- 紅燈本身是真的：上游在水位之後確實有東西。以下為審查。
+
+## 2026-10-27 上游審查（commit `9e8c9fc → 209fcd2`；PR 8593 → 8610；issue 8592 → 8597）
+
+**審查前提：** 本 fork 與水位 `9e8c9fc` 之間，產品目錄只有 7 個檔案不同（`git diff 9e8c9fc HEAD --stat -- crates desktop mobile web admin-web deploy`：`buzz-dev-mcp` 兩個測試檔、`desktop/src-tauri/Cargo.lock`，以及本輪帶入的 push-gateway 四檔）。判準六的結構性論證在此成立：上游這 13 個 commit 與 fork 的分歧處幾乎不重疊（見下），沒有「fork 專屬缺陷」需要另外移植。
+
+**上游 CI 狀態（唯讀查 `0e36dbc` 的 check runs；之後的 `209fcd2` 只是 mobile 兩檔）：** 失敗三項——`Desktop`／`Desktop Domain / Desktop`／`Qualify relay image source`。`Desktop` 失敗的 job 是 `Desktop Tauri (core／compiled-flags)` 的「Install Tauri dependencies (Linux)」（`apt-get`），與本 fork 在 2026-10-26 見到的同一步驟（第 6 點）相同，屬 runner 環境問題，不是程式碼回歸；`a3a47e6`、`ab73cd9` 兩個 commit 上 `PostgreSQL Tests` 曾紅，tip 上已綠。
+
+### Commit 軸（13 筆；審查途中上游又進了 `209fcd2`，連同 #8609、#8610 一併納入）
+
+| commit | 內容 | 規模 | 與 fork 的重疊 | 處理 |
+| --- | --- | --- | --- | --- |
+| `d676c7b` #8592 | `p256` 0.13→0.14（RUSTSEC-2026-0387，crypto-bigint 0.5.5→0.7.9） | 5 檔 +98/−111 | **有**：fork 為此加了 `deny.toml` ignore | **帶入**（`3e0e7c8`，逐字 cherry-pick，`Cargo.lock` 無衝突）；移除 fork 的 0387 ignore；觸發條件（「p256 升到 crypto-bigint 0.7 線」）已成立。`cargo deny check`：advisories ok；`cargo check -p buzz-push-gateway --locked` 通過；該 crate 的測試因 dev-dependency 的 vendored OpenSSL 在本機（無 native perl／nmake）建不起來，留給 CI。 |
+| `7ce4224` #8503 | mesh 過期的 peer 記錄與開機儀器 | 11 檔 +1018/−57 | 只有 `Cargo.lock`（自動合併）；`buzz-relay-mesh/Cargo.toml` 新增 `metrics`／`metrics-util`（workspace 已有） | 不獨立帶入，隨同步合併 |
+| `4250014` #8520 | 使用者刪除改走已存檔的階段轉換 | 34 檔 +3732/−170 | 無 | 同上 |
+| `4c7ba3b` #8567 | 文件：RELEASING.md 移除 NIP-FI migration gate | 1 檔 −39 | 無 | 同上 |
+| `d0dee1c` #8575 | relay：一個 kind:9000 加入多人 | 11 檔 +1404/−200 | 無（動 `_ci-relay.yml` 三行測試清單，fork 未改該檔） | 同上 |
+| `369ffa0` #8401 | relay：驗證 NIP-FI agent token | 36 檔 +3630/−548 | 無 | 同上 |
+| `d727033` #8548 | 文件／提示：memory 當索引、來源標註 | 3 檔 +23/−4 | 無 | 同上 |
+| `b8b1ab5` #8524 | push：避免空的投遞 claim | 5 檔 +584/−24 | 無 | 同上 |
+| `d090ac2` #8490 | mobile：減少閒置與恢復時的同步 | 9 檔 +403/−38 | 無（mobile，fork 不建置） | 同上 |
+| `ab73cd9` #8580 | mobile：在社群同步前還原快取的頻道 | 24 檔 +2424/−405 | 無 | 同上 |
+| `a3a47e6` #8579 | relay：unlisted 頻道設定 | 25 檔 +1730/−101 | 無 | 同上 |
+| `0e36dbc` #8495 | db：讀取連線池保溫、移除 pre-acquire ping | 8 檔 +863/−186 | 無 | 同上 |
+| `209fcd2` #8608 | mobile：建立 push 訂閱時忽略不相干的靜音設定 | 2 檔 +22/−4 | 無（mobile） | 同上；它是 PR #8608 的 squash，新增行與我們審過的 PR head `69a6df7` 逐行相同 |
+
+**「隨同步合併」的依據（可重跑）：** 在 `3e0e7c8` 之上 `git merge --no-commit --no-ff <上游 0e36dbc>` 自動合併完成、零衝突（`Cargo.lock` 也自動合併），且合併後 `cargo metadata --locked` 通過；之後 `git merge --abort`（當時上游 tip 是 `0e36dbc`；之後多的 `209fcd2` 只動兩個 mobile 檔，不與任何 fork 修補重疊）。**水位推進不等於產品碼已同步**：本檢查的「behind」是相對水位算的，推進後會顯示 behind 0，但產品碼實際仍落後這 12 個 commit（除 `d676c7b` 外的全部）。它們在此明列：合併的時機由維護者決定；建議先推送本輪三個 commit、看 CI 結果，再單獨合併上游（出現新紅燈才能歸因）。合併後新鮮度報告會多出新宣告的列（例如 `metrics`），屆時另行處理。
+
+**隱藏內容掃描（判準八）：** 13 個 commit 的完整 diff（`9e8c9fc..209fcd2`，157＋2 檔）：行內長串空白後接內容、`eval(`／`new Function(`、`globalThis`／`global.require`、≥120 字元 base64／hex、零寬與雙向控制字元，皆無命中；超過 400 字元的新增行逐筆看過，都是文件表格（`NOSTR.md`、`NIP-FI`）、CLI help 字串、`Justfile` 的 nextest 篩選式、`base_prompt.md` 的提示文字與一則 Rust 文件註解。
+
+### PR 軸（16 筆新項目；15 筆 open，#8608 已合併成 `209fcd2`，無已關閉未合併）
+
+全部：**不引進，未合併前不審內容細節，上游合併後經 commit 軸審查**（同 #8593 的做法）；PR 水位推進到 8608。每筆已取**目前** head 並掃描 diff（掃描方式同上；`+` 前綴加縮排造成的「長空白」誤判已排除）：
+
+| PR | head | 規模 | 隱藏內容 | 與 fork 的關係 |
+| --- | --- | --- | --- | --- |
+| #8594 auto-join 預設頻道 | `502d016` | 18 檔 +1286/−86 | 無（最長新增行是 `NOSTR.md` 表格） | relay／db，fork 無分歧碼 |
+| #8595 invites 走原生網路 | `3ed2df1` | 8 檔 +164/−137 | 無（`globalThis.window` 僅在 `invites.test.mjs` 當測試替身） | desktop |
+| #8596 影片縮小再上傳 | `daff931` | 1 檔 +105/−12 | 無 | desktop |
+| #8598 Rust 1.98.1（macOS 27） | `8b28f5f` | 29 檔 +85/−73 | 無 | **動 `_ci-rust.yml`、`release.yml`、`windows-canary.yml`、Dockerfile**：與 fork 的 `_ci-rust.yml` Windows 逾時修補同檔。觸發：上游合併時重驗該逾時修補是否還在、`docker.yml` 守衛是否衝突 |
+| #8599 mobile QR 優先 onboarding | `37194be` | 13 檔 +563/−263 | 無 | mobile。**審查期間 head 換了三次：`0a4d964`（12 檔 +302/−101）→ `12c7d59`（13 檔 +563/−263）→ `37194be`（同規模）**；三個版本都掃過、沒有隱藏內容，以最後的 head 為準 |
+| #8600 draft：邀請同意移出瀏覽器 | `32767f9` | 2 檔 +60/−47 | 無 | web |
+| #8601 邀請 handoff 的原生同意 | `a1d1703` | 16 檔 +848/−135 | 無（`globalThis.fetch`／`__TAURI_INTERNALS__` 僅在 `useClaimInvite.jsdom-test.mjs` 當測試替身） | desktop |
+| #8602 專案卡片可刪 repository（#8597） | `810b5a3` | 9 檔 +527/−24 | 無 | desktop；對應下方 issue #8597 |
+| #8603 持續重試失敗的 agent runtime 對帳（#8591） | `45625d4` | 4 檔 +100/−10 | 無 | desktop |
+| #8604 保留 `child_pid`、認得 `codex` binary（#8590） | `a9695aa` | 3 檔 +16/−3 | 無 | `kill_process_group` 為 Unix 路徑，非 Unix 仍 fallback `start_kill()`，不是 Windows 專屬修正 |
+| #8605 為假刪除流程產生使用者社群清單 | `987af1d` | 25 檔 +1405/−106 | 無 | admin／db。審查期間 head 由 `8b89997` 換成 `987af1d`（規模相同，疑似 rebase）；兩版都掃過 |
+| #8606 draft：kind:9000 與成員寫入同一交易（#8575 的後續） | `d18e88f` | 5 檔 +425/−55 | 無（最長新增行是 `NOSTR.md` 表格） | relay |
+| #8607 mobile 批次初始已讀種子 | `6a232ed` | 6 檔 +221/−61 | 無 | mobile |
+| #8608 mobile 忽略不相干的靜音設定 | `69a6df7` | 2 檔 +22/−4 | 無 | mobile；**已合併為 `209fcd2`**，見 commit 軸 |
+| #8609 push：跨版本接受正規 channel UUID | `0f5acd4` | 9 檔 +156/−10 | 無（最長新增行是 `NIP-PL.md` 表格） | relay／mobile |
+| #8610 draft：把 push 設定失敗與 app 渲染隔離 | `e9a1068` | 8 檔 +573/−47 | 無 | mobile |
+
+### Issue 軸（1 筆新項目）
+
+- **#8597**（open）：桌面端刪除專案後，預設 repository 留下且無法刪除。對應 PR #8602。fork 的 `desktop/src` 與上游相同（`git diff 9e8c9fc HEAD -- desktop/src` 無輸出），所以這是 fork 同樣帶有的上游缺陷，不是 fork 專屬。不處理（不改產品碼）；觸發：上游合併 #8602。
+
+### 水位
+
+`tools/upstream_baseline.json`：`reviewed_through` → `209fcd21725b8728fed8b14dca1636018d175458`，`reviewed_pr_through` → 8610，`reviewed_issue_through` → 8597，`reviewed_date` → 2026-10-27。
