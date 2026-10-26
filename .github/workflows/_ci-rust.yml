@@ -110,7 +110,9 @@ jobs:
     runs-on: windows-latest
     # Windows runners are slow and this compiles the workspace + Tauri crate
     # cold across four steps; budget generously.
-    timeout-minutes: 45
+    # fork patch (SanHsien/buzz): no warm cache outside block, so allow a cold build to
+    # finish (docs/fork/DECISIONS.md).
+    timeout-minutes: ${{ github.repository_owner == 'block' && 45 || 90 }}
     if: inputs.lane == 'required' && (github.event_name == 'push' || inputs.rust || inputs.desktop_rust)
     permissions:
       contents: read
