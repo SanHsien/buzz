@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -119,3 +120,45 @@ def test_cursor_rule_pins_prs_to_this_fork() -> None:
     text = (REPO_ROOT / ".cursor" / "rules" / "no-upstream-pr.mdc").read_text("utf-8")
     assert "alwaysApply: true" in text
     assert "SanHsien/buzz" in text
+
+
+OWNER_GUARD = "github.repository_owner == 'block'"
+PUBLISH_WORKFLOWS = ("docker.yml", "sprig.yml", "sprig-image.yml")
+# Jobs that must build on every owner but may only *push* for `block`; their guard lives on the
+# push-capable steps (checked below) instead of on the job.
+STEP_GUARDED_JOBS = {
+    ("docker.yml", "build"),
+    ("docker.yml", "push-gateway-build"),
+    ("sprig-image.yml", "build"),
+}
+
+
+def _can_write(job: dict) -> bool:
+    perms = job.get("permissions") or {}
+    return isinstance(perms, dict) and "write" in {perms.get("contents"), perms.get("packages")}
+
+
+def test_every_publishing_job_outside_the_block_owner_is_skipped() -> None:
+    """A tag push (`sprig-v*`) or a dispatch on the fork must not publish what the rolling path
+    already refuses to: DECISIONS.md says Sprig publishing stays with the upstream owner."""
+    unguarded = []
+    for name in PUBLISH_WORKFLOWS:
+        for job_id, job in _workflow(name)["jobs"].items():
+            if not _can_write(job) or (name, job_id) in STEP_GUARDED_JOBS:
+                continue
+            if OWNER_GUARD not in str(job.get("if", "")):
+                unguarded.append(f"{name}:{job_id}")
+    assert not unguarded, f"publishing jobs without the owner guard: {unguarded}"
+
+
+def test_push_capable_build_steps_carry_the_owner_guard() -> None:
+    missing = []
+    for name, job_id in sorted(STEP_GUARDED_JOBS):
+        for step in _workflow(name)["jobs"][job_id]["steps"]:
+            if not str(step.get("uses", "")).startswith("docker/build-push-action"):
+                continue
+            outputs = str((step.get("with") or {}).get("outputs", ""))
+            push = re.search(r"push=\$\{\{.*?\}\}", outputs)
+            if push is None or OWNER_GUARD not in push.group(0):
+                missing.append(f"{name}:{job_id}:{step.get('name')}")
+    assert not missing, f"build-push steps that can push outside block: {missing}"
