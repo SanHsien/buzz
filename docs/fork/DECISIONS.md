@@ -46,3 +46,14 @@ Dependabot alerts 與自動安全更新在 fork 預設關閉（API 404／disable
 | Dependabot 更新（vitest、markdown-it） | 失敗 | Dependabot 更新器內部錯誤（無法讀細節）；vite、zod 已成功開出 PR #1、#2。 | 觀察；PR 在 CI 綠且審查後才合併。 |
 
 Dependabot alerts 與自動安全更新已於推送時開啟。branch protection 不設必要檢查（沒有任何一個會穩定回報成功）。
+
+## 2026-10-26 讓上游遺留的紅燈變綠（本 fork 對上游檔案的三處修補）
+
+這是第一次改上游持有檔，因為維護者要求不留紅燈且不得停用 workflow。每一處都是最小修補，加上註解標明 `fork patch`，同步上游時若衝突以上游為準再重做。
+
+1. **`deny.toml`＋`Cargo.lock`（cargo-deny）**：
+   - `tokio` 1.52.3 → 1.54.1（RUSTSEC-2026-0386）與 `lru` 0.18.0 → 0.18.2（iroh-relay 帶入的那一份，RUSTSEC-2026-0253 的修補版），皆 semver 相容，由 `cargo update` 產生。重新解析也順帶把 Windows 專用的 `windows-sys`／`windows-link` 依賴改指到 lock 內已有的版本（anstream、rustix、tempfile 等），只影響 Windows target，`--locked` 與 `cargo check` 通過。
+   - RUSTSEC-2026-0387（`crypto-bigint 0.5.5`，修補版只有 >=0.7.6，鏈在 `p256 0.13`）與 RUSTSEC-2026-0253（剩下的 `lru 0.16.4`：workspace 的 `lru = "0.16"` 與 `launchdarkly-server-sdk =3.2.0` 的 `lru ^0.16`，修補版 >=0.18.2）無法由相容升級解決，加 `ignore` 並附影響評估：push-gateway 只用 p256 解析公鑰、不處理祕密整數；`lru` 只有在鍵的 `Drop` 會 panic 且 `catch_unwind` 時才不安全，buzz 自己的鍵是 `String`（`nip_fi_resolver.rs`）；launchdarkly 3.2.0 內部（`events/dispatcher.rs`）鍵型別也是 `String`。觸發條件寫在 `deny.toml` 註解：p256 升到 crypto-bigint 0.7 線；workspace lru 與 launchdarkly 都升到 lru >= 0.18.2。
+   - 另一個選項「把 workspace `lru` 升到 0.18」被放棄：launchdarkly 仍會留下 0.16.4，升級沒有消除告警，只增加產品碼風險。
+2. **`docker.yml`**：非 `block` owner 時只 build、不 push、不寫 buildcache、不跑 qualify／merge，因為映像名固定在 `ghcr.io/block/*`（沒有權限）。保留 build 的驗證價值。若日後想推到自己的 ghcr，需要設 `vars.GHCR_IMAGE` 並處理 push-gateway 的寫死名稱，目前不做。
+3. **`sprig.yml`**：發佈 job 只在 `block` owner 執行。維護主管（代轉維護者）曾表示可建立 fork 自己的 `sprig-latest` release，但那會公開發佈 CI 建置的二進位檔，屬於需維護者明確同意的動作；改採「fork 只 build」讓 workflow 轉綠，未建立 release。

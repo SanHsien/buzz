@@ -1,3 +1,7 @@
+# fork patch (SanHsien/buzz): outside the `block` owner there is no permission to
+# push to ghcr.io/block/*, so every publish path (login-gated pushes, buildcache
+# writes, digest export, qualify and merge jobs) is skipped and the build jobs only
+# build. See docs/fork/DECISIONS.md.
 name: Docker image
 
 # Builds and publishes the public Buzz relay images as ghcr.io/block/buzz.
@@ -194,11 +198,11 @@ jobs:
           # Push by digest, not by tag — the merge job assembles the tags
           # into one multi-arch manifest. This is what makes the native-arm
           # matrix possible.
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' && github.repository_owner == 'block' }}
           cache-from: |
             type=registry,ref=${{ env.IMAGE_NAME }}-buildcache:${{ matrix.arch }}
           cache-to: |
-            ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref={0}-buildcache:{1},mode=max,compression=zstd', env.IMAGE_NAME, matrix.arch) || '' }}
+            ${{ github.repository_owner == 'block' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref={0}-buildcache:{1},mode=max,compression=zstd', env.IMAGE_NAME, matrix.arch) || '' }}
 
       - name: Build and push debug image by digest
         id: build-debug
@@ -213,12 +217,12 @@ jobs:
             BUZZ_SOURCE_SHA=${{ github.sha }}
             BUZZ_BUILD_ID=github-actions:${{ github.run_id }}:${{ github.run_attempt }}
             BUZZ_BUILD_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' && github.repository_owner == 'block' }}
           cache-from: |
             type=registry,ref=${{ env.IMAGE_NAME }}-buildcache:${{ matrix.arch }}
 
       - name: Export release and debug digests
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         env:
           RELEASE_DIGEST: ${{ steps.build-release.outputs.digest }}
           DEBUG_DIGEST: ${{ steps.build-debug.outputs.digest }}
@@ -228,7 +232,7 @@ jobs:
           touch "/tmp/digests-debug/${DEBUG_DIGEST#sha256:}"
 
       - name: Upload release digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: digests-release-${{ matrix.arch }}
@@ -237,7 +241,7 @@ jobs:
           retention-days: 1
 
       - name: Upload debug digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: digests-debug-${{ matrix.arch }}
@@ -247,7 +251,7 @@ jobs:
 
   qualify:
     name: Qualify relay image source
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.repository_owner == 'block'
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     permissions:
@@ -322,7 +326,7 @@ jobs:
 
   merge:
     name: Merge ${{ matrix.variant }} multi-arch manifest
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.repository_owner == 'block'
     runs-on: ubuntu-24.04
     needs: [build, qualify]
     timeout-minutes: 15
@@ -564,16 +568,16 @@ jobs:
           file: ./Dockerfile.push-gateway
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=ghcr.io/block/buzz-push-gateway,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=ghcr.io/block/buzz-push-gateway,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' && github.repository_owner == 'block' }}
           cache-from: type=registry,ref=ghcr.io/block/buzz-push-gateway-buildcache:${{ matrix.arch }}
-          cache-to: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref=ghcr.io/block/buzz-push-gateway-buildcache:{0},mode=max,compression=zstd', matrix.arch) || '' }}
+          cache-to: ${{ github.repository_owner == 'block' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref=ghcr.io/block/buzz-push-gateway-buildcache:{0},mode=max,compression=zstd', matrix.arch) || '' }}
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: mkdir -p /tmp/gateway-digests && touch "/tmp/gateway-digests/${DIGEST#sha256:}"
       - name: Upload digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: gateway-digests-${{ matrix.arch }}
@@ -616,7 +620,7 @@ jobs:
 
   push-gateway-merge:
     name: Publish public push gateway image
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.repository_owner == 'block'
     runs-on: ubuntu-24.04
     # Staging promotes every published main gateway image automatically, so the
     # gateway publishes only from a source the relay's same-SHA CI qualified.

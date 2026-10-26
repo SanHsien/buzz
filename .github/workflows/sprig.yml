@@ -107,9 +107,14 @@ jobs:
   publish:
     name: Publish rolling release
     needs: build
+    # fork patch (SanHsien/buzz): the rolling `sprig-latest` release is created and owned
+    # by block/buzz; a fork has no such release, so only the build runs there
+    # (docs/fork/DECISIONS.md).
     if: |
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
-      || (github.event_name == 'workflow_dispatch' && inputs.publish)
+      github.repository_owner == 'block' && (
+        github.event_name == 'push' && github.ref == 'refs/heads/main'
+        || (github.event_name == 'workflow_dispatch' && inputs.publish)
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
