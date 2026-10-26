@@ -108,8 +108,11 @@ def test_a_full_ticket_page_above_the_watermark_is_not_checked(monkeypatch) -> N
     monkeypatch.setattr(upstream.subprocess, "run", fake_run)
     baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 100}
     assert upstream.collect_new_tickets(baseline, "pr") is None
-    baseline["reviewed_pr_through"] = 8500  # page reaches back past the watermark: complete
+    oldest = 9000 - upstream.TICKET_LIMIT + 1
+    baseline["reviewed_pr_through"] = oldest  # page reaches the watermark: complete
     assert upstream.collect_new_tickets(baseline, "pr") is not None
+    baseline["reviewed_pr_through"] = oldest - 1  # one number unlisted below the page
+    assert upstream.collect_new_tickets(baseline, "pr") is None
 
 
 def test_cursor_rule_pins_prs_to_this_fork() -> None:

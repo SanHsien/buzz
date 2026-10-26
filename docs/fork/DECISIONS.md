@@ -27,4 +27,8 @@
 
 `ci.yml` 對 `push main`／`pull_request` 沒有 `github.repository` 守衛，所以推送到本 fork 會跑完整的上游 CI（Rust、桌面、行動端、security），耗時長且部分步驟可能因缺 secrets 或 runner 而失敗；約 17 支其他 workflow 有守衛（docker、release、canary 等）會跳過。
 
-處理方式：首次推送後讀實際 check runs，把「缺 secrets 造成的紅燈」與「真壞」分開記在這裡（下方「首次 CI 結果」）；**不停用任何 workflow**、不改上游 workflow 檔（避免同步衝突）。必要檢查（branch protection）一律不設，除非確認它真的會回報。
+處理方式：首次推送後讀實際 check runs，把「缺 secrets 造成的紅燈」與「真壞」分開記在這裡（見下方「首次 CI 結果」，推送後補）；**不停用任何 workflow**、不改上游 workflow 檔（避免同步衝突）。必要檢查（branch protection）一律不設，除非確認它真的會回報。
+
+## 2026-10-26 安全告警
+
+Dependabot alerts 與自動安全更新在 fork 預設關閉（API 404／disabled）。有可掃的依賴宣告，所以已於首次推送時開啟；新鮮度延後清單不替代它們。

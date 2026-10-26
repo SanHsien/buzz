@@ -471,7 +471,8 @@ def main() -> int:
         # Fail closed. A report that could not enumerate tickets must not
         # be allowed to read as a clean bill of health.
         print(
-            "ERROR: gh could not enumerate upstream "
+            "ERROR: gh could not enumerate upstream (auth failure, or a result page "
+            "that hit TICKET_LIMIT without reaching the watermark) "
             + " and ".join(unavailable)
             + "."
         )

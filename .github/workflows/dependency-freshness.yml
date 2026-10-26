@@ -6,8 +6,8 @@ on:
     paths:
       - package.json
       - '*/package.json'
-      - Cargo.toml
       - '**/Cargo.toml'
+      - .github/workflows/**
       - tools/check_dependency_freshness.py
       - .github/dependabot.yml
       - .github/dependency-deferrals.json

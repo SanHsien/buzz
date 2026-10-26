@@ -202,10 +202,6 @@ def _merge(packages: list[dict[str, str]]) -> list[dict[str, str]]:
 
 def _load_toml(path: Path) -> dict[str, object]:
     try:
-        import tomllib  # Python 3.11+; the freshness workflow runs on 3.12
-    except ImportError as exc:  # pragma: no cover - only on an old local interpreter
-        raise DependencyCheckError("reading TOML needs Python 3.11 or newer") from exc
-    try:
         return tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise DependencyCheckError(f"cannot read {path.name}: {exc}") from exc
