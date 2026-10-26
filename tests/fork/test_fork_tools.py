@@ -388,3 +388,31 @@ def test_deny_toml_marks_the_ignores_the_fork_added() -> None:
     marker_at = text.index(FORK_PATCH_MARKER)
     for advisory in ("RUSTSEC-2026-0253", "RUSTSEC-2026-0387"):
         assert marker_at < text.index(f'id = "{advisory}"')
+
+
+def _locked_versions(lock: str, crate: str) -> list[str]:
+    import tomllib
+
+    data = tomllib.loads((REPO_ROOT / lock).read_text(encoding="utf-8"))
+    return [p["version"] for p in data["package"] if p["name"] == crate]
+
+
+# Patched floors for advisories the fork already cleared in the root lock (docs/fork/DECISIONS.md).
+# `cargo deny check` reads only the root workspace, so nothing but this test notices when the
+# excluded Tauri lock (the desktop app's own dependency set) still carries the vulnerable release.
+TAURI_LOCK_PATCHED_FLOORS = {
+    "lru": (0, 18, 2),  # RUSTSEC-2026-0253
+    "tokio": (1, 54, 1),  # RUSTSEC-2026-0386
+    "h2": (0, 4, 16),  # RUSTSEC-2026-0258
+    "rtrb": (0, 3, 5),  # RUSTSEC-2026-0274
+}
+
+
+def test_tauri_lock_carries_the_patched_releases_cargo_deny_never_checks() -> None:
+    behind = {
+        f"{crate} {version}": floor
+        for crate, floor in TAURI_LOCK_PATCHED_FLOORS.items()
+        for version in _locked_versions("desktop/src-tauri/Cargo.lock", crate)
+        if (fresh.release_key(version) or ()) < floor
+    }
+    assert not behind, f"Tauri Cargo.lock below the patched release: {behind}"
