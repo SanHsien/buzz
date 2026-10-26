@@ -21,7 +21,7 @@ jobs:
   analyze:
     name: ${{ matrix.language }} security scan
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:

@@ -47,7 +47,7 @@ Dependabot alerts 與自動安全更新在 fork 預設關閉（API 404／disable
 
 Dependabot alerts 與自動安全更新已於推送時開啟。branch protection 不設必要檢查（沒有任何一個會穩定回報成功）。
 
-## 2026-10-26 讓上游遺留的紅燈變綠（本 fork 對上游檔案的三處修補）
+## 2026-10-26 讓上游遺留的紅燈變綠（本 fork 對上游檔案的修補）
 
 這是第一次改上游持有檔，因為維護者要求不留紅燈且不得停用 workflow。每一處都是最小修補，加上註解標明 `fork patch`，同步上游時若衝突以上游為準再重做。
 
@@ -57,3 +57,7 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
    - 另一個選項「把 workspace `lru` 升到 0.18」被放棄：launchdarkly 仍會留下 0.16.4，升級沒有消除告警，只增加產品碼風險。
 2. **`docker.yml`**：非 `block` owner 時只 build、不 push、不寫 buildcache、不跑 qualify／merge，因為映像名固定在 `ghcr.io/block/*`（沒有權限）。保留 build 的驗證價值。若日後想推到自己的 ghcr，需要設 `vars.GHCR_IMAGE` 並處理 push-gateway 的寫死名稱，目前不做。
 3. **`sprig.yml`**：發佈 job 只在 `block` owner 執行。維護主管（代轉維護者）曾表示可建立 fork 自己的 `sprig-latest` release，但那會公開發佈 CI 建置的二進位檔，屬於需維護者明確同意的動作；改採「fork 只 build」讓 workflow 轉綠，未建立 release。
+
+4. **`sprig-image.yml`**：與 `docker.yml` 相同的 owner 閘門（映像 `ghcr.io/block/buzz-sprig`，fork 沒有權限）。8398c4e 的 run 證實 `permission_denied`。
+5. **`codeql.yml`（本 fork 自己的檔案）**：`timeout-minutes` 30 → 90。8398c4e 的 rust 掃描在 30 分鐘被取消（冷快取、約 40 個 crate 的 workspace）；先前 `2ab160a` 的同一掃描曾在時限內完成，所以是邊界而非壞掉。
+6. **Desktop Tauri (mesh) 的「Install Tauri dependencies (Linux)」失敗**：該步驟是 `apt-get install`（有重試腳本），日誌取不到錯誤細節，推測為套件鏡像暫時性問題（未證實），已重跑失敗的 job 一次確認；結果見下方。

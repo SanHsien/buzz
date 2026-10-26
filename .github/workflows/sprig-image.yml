@@ -1,3 +1,5 @@
+# fork patch (SanHsien/buzz): no permission to push ghcr.io/block/*, so outside the `block`
+# owner this only builds (same gate as docker.yml; see docs/fork/DECISIONS.md).
 name: Sprig image
 
 # Builds and publishes the public agent container image as
@@ -120,14 +122,14 @@ jobs:
           file: ./Dockerfile.sprig
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' && github.repository_owner == 'block' }}
           cache-from: |
             type=registry,ref=${{ env.IMAGE_NAME }}-buildcache:${{ matrix.arch }}
           cache-to: |
-            ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref={0}-buildcache:{1},mode=max,compression=zstd', env.IMAGE_NAME, matrix.arch) || '' }}
+            ${{ github.repository_owner == 'block' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && format('type=registry,ref={0}-buildcache:{1},mode=max,compression=zstd', env.IMAGE_NAME, matrix.arch) || '' }}
 
       - name: Export digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -135,7 +137,7 @@ jobs:
           touch "/tmp/digests/${DIGEST#sha256:}"
 
       - name: Upload digest
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.repository_owner == 'block'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: sprig-digest-${{ matrix.arch }}
@@ -145,7 +147,7 @@ jobs:
 
   merge:
     name: Merge multi-arch manifest
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.repository_owner == 'block'
     runs-on: ubuntu-24.04
     needs: build
     timeout-minutes: 15
