@@ -33,8 +33,9 @@
 | `.github/workflows/docker.yml`、`.github/workflows/sprig-image.yml` | 非 `block` owner 只 build、不 push（映像名固定在 `ghcr.io/block/*`） |
 | `.github/workflows/sprig.yml` | 滾動 release 與 `sprig-v*` tag release 兩個發佈 job 都只在 `block` owner 執行 |
 | `.github/workflows/_ci-rust.yml` | 非 `block` owner 時 Windows Rust 逾時 45 → 90 分鐘（無暖快取） |
-| `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）、`RUSTSEC-2026-0387`（crypto-bigint 0.5.5）兩條帶影響評估與移除條件的 ignore |
+| `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）一條帶影響評估與移除條件的 ignore（`RUSTSEC-2026-0387` 已由上游 `d676c7b` 的 p256 0.14 取代，ignore 移除） |
 | `Cargo.lock`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml` | 相容的鎖檔升級（tokio、hickory、vite 等），**manifest 宣告不動**；清單見 `docs/fork/DECISIONS.md` |
+| `crates/buzz-push-gateway/Cargo.toml`、`src/app_attest/{authenticator,certificate}.rs`、`src/app_attest_assertion_tests.rs`（含 `Cargo.lock` 的 p256 鏈） | 逐字帶入上游 `d676c7b`（p256 0.13 → 0.14，RUSTSEC-2026-0387）；不是 fork 自己的設計，下次合併上游時內容相同，不會衝突 |
 | `crates/buzz-dev-mcp/src/{shell,read_file}.rs` | 只動 `#[cfg(test)]`：Windows 平行測試共用一把 env 鎖（`e3561ee`），不影響執行期 |
 
 上游持有的 `README.md`、`AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。

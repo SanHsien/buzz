@@ -386,8 +386,19 @@ def test_deny_toml_marks_the_ignores_the_fork_added() -> None:
     """Upstream owns deny.toml; the marker is what lets a sync tell its ignores from ours."""
     text = (REPO_ROOT / "deny.toml").read_text(encoding="utf-8")
     marker_at = text.index(FORK_PATCH_MARKER)
-    for advisory in ("RUSTSEC-2026-0253", "RUSTSEC-2026-0387"):
-        assert marker_at < text.index(f'id = "{advisory}"')
+    assert marker_at < text.index('id = "RUSTSEC-2026-0253"')
+
+
+def test_crypto_bigint_advisory_is_cleared_by_the_lock_not_by_an_ignore() -> None:
+    """RUSTSEC-2026-0387 was first ignored, then fixed by taking upstream's p256 0.14. An ignore
+    that comes back would silence the advisory while a vulnerable crypto-bigint sits in the lock;
+    the lock is what has to carry the patched release (>= 0.7.6)."""
+    assert 'id = "RUSTSEC-2026-0387"' not in (REPO_ROOT / "deny.toml").read_text(encoding="utf-8")
+    versions = _locked_versions("Cargo.lock", "crypto-bigint")
+    assert versions, "crypto-bigint left the lock; delete this test"
+    for version in versions:
+        parts = tuple(int(x) for x in version.split(".")[:3])
+        assert parts >= (0, 7, 6), f"crypto-bigint {version} is below the patched 0.7.6"
 
 
 def _locked_versions(lock: str, crate: str) -> list[str]:

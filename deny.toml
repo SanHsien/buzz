@@ -48,9 +48,8 @@ ignore = [
     # (via axum and nostr-sdk) still require ^0.26, and no patched 0.26 release
     # exists. Remove when those consumers move to webpki-roots 1.
     { id = "RUSTSEC-2026-0381", reason = "only webpki-roots 0.26.11 remains: a shim re-exporting the patched 1.0.10; required by tokio-tungstenite 0.28/0.29" },
-    # fork patch (SanHsien/buzz): the RUSTSEC-2026-0253 and RUSTSEC-2026-0387 ignores below are
-    # this fork's own (docs/fork/DECISIONS.md); on a sync conflict, upstream wins and these are
-    # re-evaluated.
+    # fork patch (SanHsien/buzz): the RUSTSEC-2026-0253 ignore below is this fork's own
+    # (docs/fork/DECISIONS.md); on a sync conflict, upstream wins and it is re-evaluated.
     # lru 0.16.4 — LruCache::pop() is not panic-safe (unsound only when a stored key's Drop
     # panics under unwinding and the panic is caught with catch_unwind). Pulled in by
     # launchdarkly-server-sdk, which buzz-feature-flags pins exactly (=3.2.0) and requires lru ^0.16.
@@ -61,15 +60,6 @@ ignore = [
     # is not covered by this reason. Remove when BOTH the workspace `lru = "0.16"` (buzz-relay)
     # and launchdarkly-server-sdk have moved to lru >= 0.18.2.
     { id = "RUSTSEC-2026-0253", reason = "lru 0.16.4 via launchdarkly-server-sdk =3.2.0; unsound only if a key Drop panics under catch_unwind; keys are String; patched >= 0.18.2 needs the launchdarkly pin to move" },
-    # crypto-bigint 0.5.5 — constant-time branches in subtraction, division and Montgomery
-    # multiplication (disclosed 2026-10-23). The patch exists only as >= 0.7.6, and the
-    # lockfile pins 0.5.5 through buzz-push-gateway → p256 0.13 / ecdsa 0.16 /
-    # elliptic-curve 0.13 / primeorder; a semver-compatible `cargo update` cannot reach it.
-    # buzz-push-gateway uses p256 only to parse public keys (PublicKey::from_sec1_bytes in
-    # app_attest); no secret scalar is processed there outside test helpers
-    # (app_attest/testing.rs), so the timing side channel has no secret to leak.
-    # Remove when p256 moves to the crypto-bigint 0.7 line.
-    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5.5 via buzz-push-gateway → p256 0.13; only public-key parsing, no secret integers; patched only >= 0.7.6 (needs p256 major bump)" },
 ]
 
 [licenses]
