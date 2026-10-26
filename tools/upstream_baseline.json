@@ -1,0 +1,10 @@
+{
+  "repo": "https://github.com/block/buzz.git",
+  "branch": "main",
+  "reviewed_through": "9e8c9fc04daf20259cd259dcaec89109587cc7f5",
+  "reviewed_date": "2026-10-26",
+  "reviewed_pr_through": 8593,
+  "reviewed_issue_through": 8592,
+  "track": "commit",
+  "decision_log": "docs/fork/DECISIONS.md"
+}

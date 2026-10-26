@@ -1,0 +1,24 @@
+# Fork 決策紀錄
+
+## 2026-10-26 建立維護骨架
+
+- **水位起點**：fork 建立時上游 `main` 即 `9e8c9fc`（`ahead_by 0`）。commit 水位＝`9e8c9fc`；PR／issue 水位＝8592（建立當天上游最大編號）。
+- **刻意不做：水位以前的 issue 分流。** 上游約 3,682 個 open issue，逐筆分流沒有可驗證的產出。觸發條件：本 fork 開始改產品碼，或遇到具體缺陷時，針對該區域搜尋 `--state all`。
+- **追蹤模式用 commit，不用 release。** 上游 tag 有 `v*`、`desktop-v*`、`mobile-v*`、`chart-v*` 等多條線，semver 單線追不全；上游 main 約每週數十個 commit，仍可逐週審。
+- **README／AGENTS／CLAUDE 不改。** 這些是上游持有檔；翻轉成繁中會讓每次同步都衝突。fork 說明放 `FORK.md`。
+- **Dependabot 取代 Renovate。** 上游 `renovate.json` 依賴 Renovate 應用程式，fork 沒有安裝，不會運作；本 fork 用 Dependabot（cargo、npm、github-actions、docker、pub）。`renovate.json` 保留不動。
+- **依賴新鮮度只讀 npm、Cargo 與 workflow pins。** Pub（`mobile/pubspec.yaml`）、Gradle、SwiftPM、`benchmarks/` 的 pyproject 沒有對應讀取器；Dependabot 仍涵蓋 pub。觸發條件：這些宣告造成實際漏更時再加讀取器。
+- **CodeQL 語言：javascript-typescript、rust（build-mode none）、actions。** Kotlin 需完整 Android 建置、Swift 需 macOS runner，成本與訊號不成比例；觸發條件：行動端出現本 fork 自己的程式。
+- **不在 Windows 跑上游 CI。** 上游 Windows 只有 `windows-canary`（手動觸發）。
+
+## 2026-10-26 上游 PR 分流
+
+- **#8593**（`feat(media): accept audio-only AAC MP4 uploads as audio/mp4`）：draft、未合併，head `a8ec9398884d12c62c5b0a5e27f4547ca5f66597`，6 檔 +644/-54。本 fork 沒有分歧的媒體碼（`crates/buzz-media`、`buzz-relay` 與上游相同），不獨立引進。觸發條件：上游合併後經 commit 軸審查；PR 水位推進到 8593。
+
+## 2026-10-26 依賴新鮮度：為什麼延後而不是提高下限
+
+首次執行有 76 筆（72 個套件名）宣告落後（npm、Cargo、workflow pins）。這些宣告都在上游持有的產品檔與 workflow 裡，本 fork 沒有任何產品變更、也無法在本機建置驗證 Rust／桌面／行動端。提高下限＝改上游檔案、製造日後同步衝突，且不能消除「新鮮度紅燈」以外的任何風險。
+
+做法：全部寫進 `.github/dependency-deferrals.json`（附 `deferredLatest` 與理由），一旦 registry 超過該版本就重新追問；不調高任何宣告下限。`Swatinem/rust-cache@<sha>` 這類無版本下限的 pin 列為 NO FLOOR（不比較）。
+
+觸發條件：本 fork 開始自己維護產品依賴時，改為逐項升級而不是延後；或上游 Renovate 長期不動某個安全相關套件時，單獨處理。
