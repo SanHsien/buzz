@@ -196,3 +196,24 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 - **新鮮度：** 合併前後的報告逐位元組相同（無新增列、無新的 `REVIEW UPDATE`）。`metrics` 系列在 workspace 本來就有宣告，狀態 OK。
 - **上游已經又前進：** 審查與本合併都停在 `209fcd2`；唯讀 `ls-remote` 看到上游 `main` 目前是 `a38fedb`。水位**維持** `209fcd2`，之後的 commit 由下次 `upstream-check` 列出。
 - **建議：** 推送後看 CI，出現的新紅燈（尤其 Desktop Tauri、Rust、Docker／Qualify relay image）要與上一節記的「上游 `0e36dbc` 的 check runs」基準（Desktop Tauri 的 apt-get 步驟、Qualify relay image source 已紅）比對再歸因。
+
+## 2026-10-28 深度掃描第二輪（只掃 fork 自己加的東西）
+
+範圍同上一輪：`git diff 209fcd2..main` 的 26 個檔案。`tools/check_upstream_updates.py` 是艦隊共用的正本（`SanHsien/repo-fleet-ops` `tools/canonical`），缺陷要回報正本、不在這裡改。
+
+已修（測試在 `tests/fork/test_fork_tools.py`，每個都先確認修前失敗）：
+
+1. **浮動 tag 加了非版本的註解就失去下限。** `uses: owner/repo@v6 # matches the runner image` 從註解取版本、取不到，列成 NO FLOOR，`v6` 從此不比較。現在只有註解本身是版本時才用註解。目前樹內沒有這種寫法（零列受影響）。
+2. **`[target.'cfg(...)'.dev-dependencies]` 沒被讀取**，只寫在那裡的 crate 會無聲地從報告消失。目前樹內沒有這種表（零列受影響）。
+3. **Cargo 的 `0.0.z` 需求只比到 `0.0`。** Cargo 的 caret 在 `0.0.z` 只允許那個 patch，`0.0.4` 出了仍顯示 OK。改為比三段；`0.y.z` 仍比 major.minor。目前樹內沒有 `0.0.z` 宣告（零列受影響）。
+
+告警盤點（2026-10-28，open）：
+
+- **CodeQL 161 筆，全部在上游持有的檔案**（rust 112、js/ts 28、actions 18、python 3 在 `benchmarks/`）。fork 新增的檔案沒有任何告警；fork 修補過的 workflow（`_ci-rust.yml`、`docker.yml`、`sprig*.yml`）也沒有。actions 告警在 `ci.yml`、`_ci-clients.yml`（缺 `permissions`）、`release.yml`、`codex-security-review.yml`（untrusted checkout），fork 都沒改過。不改，隨上游。
+- **Dependabot 103 筆，全部在上游持有的 manifest／鎖檔**：pip 84（兩份 benchmarks `uv.lock`，見 2026-10-26 決定第 1 條）、rmcp 12（同第 2 條）、tiptap／prosemirror 3（同第 2 條）、glib 1（Tauri／gtk）、`postcss-selector-parser` 1、`@vitest/mocker` 2。
+- **重試結果（第 4 條的觸發條件）：** `postcss-selector-parser` 6.0.10 是 `@tailwindcss/typography` 寫死的精確版本（最新版 0.5.20 仍是 `6.0.10`），只能改 manifest 加 override，不屬於鎖檔更新，維持現狀；觸發：typography 放寬範圍。`@vitest/mocker` 見下。glib 未變。
+- **`@vitest/mocker`：已修。** 修補版 4.1.12 已可解析；只動鎖檔，把 vitest 家族由 4.1.11 升到 4.1.12（附帶 vitest 子樹的 chai、obug、std-env、tinyexec、tinyrainbow、`@jridgewell/sourcemap-codec`）。`pnpm install --frozen-lockfile` 對整個 workspace 與唯一使用者 admin-web 通過，`vitest run` 在 4.1.12 啟動正常（admin-web 沒有測試檔）。CI 因 Actions 被停用無法驗證（見下）。
+
+觀察（不改；附觸發條件）：
+
+- **Actions 從 2026-10-26T20:34Z 之後就沒有再跑過。** 最後一次是 `8b45094` 的推送（含上游合併 `9016812`，CI 全綠）；之後三次推送（`6c78657`、`683c8a8`、`4576562`，都只動 `tools/`、`tests/fork`）都沒有 run；`POST .../dispatches` 回 HTTP 422「Actions has been disabled for this repository」，但 `GET .../actions/permissions` 回 `enabled: true`、所有 workflow 都是 `active`。設定 API 與實際執行不一致，表示停用來自 GitHub 端而不是 repo 設定；同一現象也出現在 OpenMontage、AIHOT、reverse-skill、claude-obsidian，rea 的 Security log 有 GitHub 內部 IP 寫入的 `actions_policy_violation`。原因只能在維護者帳號的 Security log 或向 GitHub 客服查。**後果：** 那三個工具 commit 與本輪的 commit 只有本機驗證（`pytest tests/fork`、`pnpm install --frozen-lockfile`），`Fork tools` 的 Windows／Ubuntu 矩陣與 CodeQL 都沒跑。觸發：Actions 恢復後，對 main 手動跑 `CI`、`Fork tools`、`CodeQL`。
