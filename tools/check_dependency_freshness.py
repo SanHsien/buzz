@@ -353,7 +353,11 @@ def load_cargo(root: Path = REPO_ROOT) -> list[dict[str, str]]:
         if isinstance(targets, dict):
             for target in targets.values():
                 if isinstance(target, dict):
-                    tables += [target.get("dependencies"), target.get("build-dependencies")]
+                    tables += [
+                        target.get("dependencies"),
+                        target.get("dev-dependencies"),
+                        target.get("build-dependencies"),
+                    ]
         for table in tables:
             if not isinstance(table, dict):
                 continue

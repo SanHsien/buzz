@@ -368,3 +368,13 @@ def test_a_floating_tag_with_a_prose_comment_keeps_its_floor() -> None:
         "      - uses: actions/checkout@v6 # matches the runner image\n", "x.yml"
     )
     assert row["minimum"] == "6"
+
+
+def test_cargo_loader_reads_target_specific_dev_dependencies(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "Cargo.toml").write_text(
+        '[package]\nname = "x"\nversion = "0.1.0"\n'
+        "[target.'cfg(windows)'.dev-dependencies]\nwinsafe = \"0.0.20\"\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(fresh, "CARGO_MANIFESTS", ("Cargo.toml",))
+    assert {p["name"] for p in fresh.load_cargo(tmp_path)} == {"winsafe"}
