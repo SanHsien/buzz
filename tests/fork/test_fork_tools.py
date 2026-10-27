@@ -378,3 +378,11 @@ def test_cargo_loader_reads_target_specific_dev_dependencies(tmp_path: Path, mon
     )
     monkeypatch.setattr(fresh, "CARGO_MANIFESTS", ("Cargo.toml",))
     assert {p["name"] for p in fresh.load_cargo(tmp_path)} == {"winsafe"}
+
+
+def test_a_cargo_0_0_x_requirement_compares_on_the_patch() -> None:
+    """Cargo's caret on 0.0.z allows only that patch, so 0.0.4 must read as newer than 0.0.3."""
+    floor = fresh.range_floor("0.0.3", True)
+    assert floor == "0.0.3"
+    assert fresh.is_newer_version("0.0.4", floor)
+    assert fresh.range_floor("^0.2.3", True) == "0.2"

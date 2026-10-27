@@ -14,7 +14,8 @@ The comparison is made at the precision the declaration commits to:
 
 * ``>=10`` or ``v7.0.1`` compare on exactly the segments written (major, or all three);
 * a caret range (``^5.6.1``, Cargo's bare ``"1.10"``) commits to the compatible series, so
-  it compares on the major segment, or major.minor while the major is ``0``;
+  it compares on the major segment, major.minor while the major is ``0``, and all three
+  for ``0.0.z``;
 * a tilde range (``~5.8.3``) compares on major.minor;
 * Go requirements compare on major.minor.
 
@@ -175,7 +176,12 @@ def range_floor(spec: str, bare_is_caret: bool) -> str:
     parts = number.split(".")
     caret = op == "^" or (op is None and bare_is_caret)
     if caret:
-        depth = 2 if parts[0] == "0" and len(parts) >= 2 else 1
+        if parts[0] != "0":
+            depth = 1
+        elif len(parts) >= 3 and parts[1] == "0":
+            depth = 3  # ^0.0.z allows only that patch
+        else:
+            depth = min(2, len(parts))
     elif op == "~":
         depth = min(2, len(parts))
     else:
