@@ -458,7 +458,12 @@ def parse_workflow_actions(text: str, source: str) -> list[dict[str, str]]:
         # a floating tag (`@v6`) carries it in the ref itself.
         # An uncommented SHA carries no version at all: its leading hex digits (`34e1148...`)
         # are not one, and reading them as a floor makes `actions/checkout` look current.
-        version_source = comment if comment else ("" if _FULL_SHA_RE.match(ref) else ref)
+        # A comment that is prose (`@v6 # matches the runner image`) is not a version either,
+        # so a floating tag keeps its own.
+        if _RELEASE_RE.match(comment.lstrip("vV")):
+            version_source = comment
+        else:
+            version_source = "" if _FULL_SHA_RE.match(ref) else ref
         version_match = _RELEASE_RE.match(version_source.lstrip("vV")) if not hold else None
         minimum = version_match.group(0) if version_match else ""
         packages.append(

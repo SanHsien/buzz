@@ -360,3 +360,11 @@ def test_tauri_lock_carries_the_patched_releases_cargo_deny_never_checks() -> No
         if (fresh.release_key(version) or ()) < floor
     }
     assert not behind, f"Tauri Cargo.lock below the patched release: {behind}"
+
+
+def test_a_floating_tag_with_a_prose_comment_keeps_its_floor() -> None:
+    """`@v6 # pinned for X`: the comment is not a version, so the floor comes from the ref."""
+    [row] = fresh.parse_workflow_actions(
+        "      - uses: actions/checkout@v6 # matches the runner image\n", "x.yml"
+    )
+    assert row["minimum"] == "6"
