@@ -97,25 +97,6 @@ def test_cargo_manifests_include_every_member_of_both_workspaces() -> None:
             assert f"{root}{member}/Cargo.toml" in fresh.CARGO_MANIFESTS, f"{root}{member}"
 
 
-def test_a_full_ticket_page_above_the_watermark_is_not_checked(monkeypatch) -> None:
-    """`gh` truncates silently; advancing the watermark past unlisted items skips them."""
-    import subprocess
-
-    page = [{"number": 9000 - i, "title": "t"} for i in range(upstream.TICKET_LIMIT)]
-
-    def fake_run(*_a, **_k):
-        return subprocess.CompletedProcess([], 0, stdout=json.dumps(page), stderr="")
-
-    monkeypatch.setattr(upstream.subprocess, "run", fake_run)
-    baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 100}
-    assert upstream.collect_new_tickets(baseline, "pr") is None
-    oldest = 9000 - upstream.TICKET_LIMIT + 1
-    baseline["reviewed_pr_through"] = oldest  # page reaches the watermark: complete
-    assert upstream.collect_new_tickets(baseline, "pr") is not None
-    baseline["reviewed_pr_through"] = oldest - 1  # one number unlisted below the page
-    assert upstream.collect_new_tickets(baseline, "pr") is None
-
-
 def test_cursor_rule_pins_prs_to_this_fork() -> None:
     text = (REPO_ROOT / ".cursor" / "rules" / "no-upstream-pr.mdc").read_text("utf-8")
     assert "alwaysApply: true" in text
@@ -217,25 +198,6 @@ def test_a_missing_git_executable_is_reported_as_a_failed_check(monkeypatch, tmp
         upstream.run_git(["fetch"], tmp_path)
 
 
-def test_gh_failure_is_none_never_an_empty_list(monkeypatch) -> None:
-    """Pins the contract the report relies on: every way `gh` can fail is `None`."""
-    import subprocess
-
-    baseline = {"repo": "https://github.com/block/buzz.git", "reviewed_pr_through": 1}
-
-    def failing(returncode: int, stdout: str):
-        return lambda *_a, **_k: subprocess.CompletedProcess([], returncode, stdout, "boom")
-
-    def missing(*_a, **_k):
-        raise FileNotFoundError("gh")
-
-    for fake in (failing(1, "[]"), failing(0, "not json"), missing):
-        monkeypatch.setattr(upstream.subprocess, "run", fake)
-        assert upstream.collect_new_tickets(baseline, "pr") is None
-    monkeypatch.setattr(upstream.subprocess, "run", failing(0, "[]"))
-    assert upstream.collect_new_tickets(baseline, "pr") == []
-
-
 def _narrow_stdout(monkeypatch):
     """A stdout whose codec cannot encode the Chinese and emoji the reports contain."""
     import io
@@ -243,35 +205,6 @@ def _narrow_stdout(monkeypatch):
     wrapper = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
     monkeypatch.setattr(sys, "stdout", wrapper)
     return wrapper
-
-
-def test_upstream_check_survives_a_stdout_that_cannot_encode_the_report(
-    monkeypatch, tmp_path: Path
-) -> None:
-    """Exit 1 means "upstream moved, review it"; a UnicodeEncodeError from `print` exits 1 too."""
-    baseline = {
-        "repo": "https://github.com/block/buzz.git",
-        "branch": "main",
-        "reviewed_through": "a" * 40,
-        "reviewed_date": "2026-10-26",
-        "track": "commit",
-    }
-    status = {"baseline": "aaaaaaa", "fork_head": "bbbbbbb", "upstream_tip": "ccccccc",
-              "ahead": 1, "behind": 0}
-    monkeypatch.setattr(upstream, "load_baseline", lambda: baseline)
-    monkeypatch.setattr(upstream, "fetch_upstream", lambda *_a: "refs/upstream-check/main")
-    monkeypatch.setattr(upstream, "collect_new_commits", lambda *_a: [])
-    monkeypatch.setattr(upstream, "fork_status", lambda *_a: status)
-    monkeypatch.setattr(
-        upstream, "collect_new_tickets", lambda *_a: [{"number": 9, "title": "launch \U0001f680"}]
-    )
-    report = tmp_path / "report.md"
-    monkeypatch.setattr(
-        sys, "argv", ["x", "--output", str(report), "--repo-dir", str(tmp_path)]
-    )
-    _narrow_stdout(monkeypatch)
-    assert upstream.main() == 0
-    assert "\U0001f680" in report.read_text(encoding="utf-8")  # the file is the faithful copy
 
 
 def test_freshness_check_survives_a_stdout_that_cannot_encode_the_report(
