@@ -830,3 +830,7 @@ persistent automatic addresses. Use the returned label from registration for
 insert/restore/remove. Ambiguous manually typed names must fail visibly without
 clearing the draft in chat, edit, and standalone forum consumers; never fan out
 silently to all identities sharing a name. See `docs/mention-editor.md`.
+
+## Roadmap
+
+- `ROADMAP.md` is the single source of truth for this repository's next work. When you finish or add work, update it in the same commit: delete finished rows, add new ones. Do not keep a to-do list in any other file.
