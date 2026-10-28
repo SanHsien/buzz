@@ -242,8 +242,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "taiki-e/install-action": {
-      "deferredLatest": "2.87.32",
-      "reason": "Re-reviewed 2026-10-27 after the 2026-10-26 entry (2.87.31) expired on the next patch release. Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 0e36dbc still pins the same SHA; the 914 commits between the tags change action.yml and main.sh, and the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
+      "deferredLatest": "2.87.33",
+      "reason": "Re-reviewed 2026-10-28 after the 2026-10-27 entry (2.87.32) expired on the next patch release (2.87.33, published 2026-10-28). Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 24a3706, now merged into the fork, still pins the same SHA; the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
     },
     "tokenizers": {
       "deferredLatest": "0.23.2",
