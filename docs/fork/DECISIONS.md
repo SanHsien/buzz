@@ -217,3 +217,53 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 觀察（不改；附觸發條件）：
 
 - **Actions 從 2026-10-26T20:34Z 之後就沒有再跑過。** 最後一次是 `8b45094` 的推送（含上游合併 `9016812`，CI 全綠）；之後三次推送（`6c78657`、`683c8a8`、`4576562`，都只動 `tools/`、`tests/fork`）都沒有 run；`POST .../dispatches` 回 HTTP 422「Actions has been disabled for this repository」，但 `GET .../actions/permissions` 回 `enabled: true`、所有 workflow 都是 `active`。設定 API 與實際執行不一致，表示停用來自 GitHub 端而不是 repo 設定；同一現象也出現在 OpenMontage、AIHOT、reverse-skill、claude-obsidian，rea 的 Security log 有 GitHub 內部 IP 寫入的 `actions_policy_violation`。原因只能在維護者帳號的 Security log 或向 GitHub 客服查。**後果：** 那三個工具 commit 與本輪的 commit 只有本機驗證（`pytest tests/fork`、`pnpm install --frozen-lockfile`），`Fork tools` 的 Windows／Ubuntu 矩陣與 CodeQL 都沒跑。觸發：Actions 恢復後，對 main 手動跑 `CI`、`Fork tools`、`CodeQL`。
+
+## 2026-10-28 上游審查與同步（commit `209fcd2 → 24a3706`；PR 8610 → 8643；issue 8597 → 8641）
+
+**審查前提：** fork 與水位 `209fcd2` 之間，產品目錄的分歧仍只有 2026-10-27 那幾處（`buzz-dev-mcp` 兩個測試檔、`desktop/src-tauri/Cargo.lock`、push-gateway 四檔），加上本日的 `Cargo.lock` pulldown-cmark 0.13.5。判準六的結構性論證仍成立；逐筆對照如下。
+
+**隱藏內容掃描（判準八）：** `209fcd2..24a3706` 的完整 diff（201 檔，+12143／−1485）：行內長串空白後接內容只有 6 行 Dart 縮排；`eval(`／`new Function(`／`global.require`、≥120 字元 base64／hex 皆無；超過 400 字元的新增行只有 `NIP-AP.md` 一段說明；零寬字元 3 個，都是 `mobile/test/features/profile/profile_setup_native_name_test.dart` 測試資料裡家庭 emoji（👨‍👩‍👧‍👦）的 ZWJ。
+
+### Commit 軸（20 筆，全部隨同步合併）
+
+| commit | 內容 | 與 fork 的重疊 |
+| --- | --- | --- |
+| `8216db1` #8598 | Rust 1.95.0 → 1.98.1（macOS 27 proc-macro 載入） | **有**：`_ci-rust.yml` 與 fork 的 Windows 冷建置逾時修補同檔。上游只改那個檔一行註解裡的版本號，自動合併後 fork 修補（`timeout-minutes: ${{ github.repository_owner == 'block' && 45 \|\| 90 }}`）原樣保留。`rust-toolchain.toml`、三個 Dockerfile 只是版本號與映像 digest，fork 沒改過。2026-10-27 記下的觸發條件「上游合併 #8598 時重驗逾時修補是否還在、`docker.yml` 守衛是否衝突」：兩者都已確認（`docker.yml` 未被動到） |
+| `8ceca8a` #8607、`5996e5d` #8610、`b148849` #8547、`ff9eb8f` #8599、`a4e83df` #8518、`b77ad2e` #8616、`b929b2c` #8629、`d4a0706` #8626、`5a8102e` #8617、`5c2ea2e` #8628 | mobile 功能與修正（已讀種子批次、push 設定失敗隔離、Solo 聊天、QR onboarding、公開頻道連結、Builderlab 遠端 agent、個人資料設定等） | 無（mobile，fork 不建置也沒改） |
+| `834dca2` #8605 | 假刪除流程的使用者社群清單 | 無（admin／db） |
+| `a38fedb` #8544、`6861e18` #8612 | desktop：Huddles 認得沒有 NIP-OA 的 agent；窄訊息列的 FileCard | 無（`desktop/src` 與上游相同） |
+| `f167c4c` #8609 | push：跨版本接受正規 channel UUID | 無 |
+| `3ce3a2e` #8631 | NIP-AP 文件定義 agenttype | 無 |
+| `c477663` #8630 | push-gateway 記錄哪一項 App Attest 檢查拒絕裝置 | 無（fork 的 push-gateway 四檔差異不在這幾行，自動合併） |
+| `403855d` #8564 | relay 測試：group-state Postgres 測試用一般 acquire 逾時 | 無 |
+| `f33ebaa` #8620 | schema：desired-state bootstrap 不再自動 fence 新表 | 無 |
+| `24a3706` #8634 | relay：記錄 NIP-FI shadow would-deny 的主體與原因 | 無 |
+
+**合併：** `git merge --no-ff upstream/main`（`24a3706`），零衝突。所有帶 `fork patch (SanHsien/buzz)` 標記的檔案中，只有 `_ci-rust.yml` 被動到（即上列那行註解）；`deny.toml`、`docker.yml`、`sprig*.yml`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`crates/buzz-dev-mcp`、根目錄 `Cargo.lock` 都沒被上游動到。
+
+**驗證：** 本機以上游新的工具鏈 Rust 1.98.1（依 `rust-toolchain.toml` 自動安裝）驗證：`cargo metadata --locked` 通過；`cargo deny check` 四項 ok；`cargo check --workspace --locked --exclude buzz-audio-client` 通過（3 分 38 秒）；`pytest tests/fork` 29 passed。完整測試與 Desktop／mobile 建置交給 CI。
+
+### PR 軸（30 筆：10 筆已合併並隨 commit 軸進來，1 筆關閉未合併，19 筆 open）
+
+已合併：#8612、#8616、#8617、#8620、#8626、#8628、#8629、#8630、#8631、#8634（合併 commit 分別在上表），全部隨本次同步進來。
+
+其餘全部**不引進，上游合併後經 commit 軸審查**（同 2026-10-27 的做法）。每筆取審查當下的 head 掃過隱藏內容，都沒有命中；兩筆各有 1 行超長，都看過：#8611 是遷移說明文字，#8635 是 `Justfile` 的 nextest 篩選式。需要特別記下的：
+
+| PR | head | 與 fork 的關係與觸發條件 |
+| --- | --- | --- |
+| #8624 15 個套件的安全升級（pnpm overrides） | `af329e9` | fork 的 Dependabot 仍開著的 `@tiptap/core`（high＋medium，#114／#112）、`prosemirror-view`（high，#116）就是這個 PR 要修的，屬 2026-10-26「維護者決定」第 2 項「等上游」的範圍；它同時把 `postcss-selector-parser` 6.0.10 覆寫到 6.1.5，也會關掉 fork 的 #134（medium），取代先前「等 `@tailwindcss/typography` 放寬範圍」那個觸發條件。seroval critical（GHSA-p6vx-979v-rg4c、GHSA-jp82-f5mq-hwhp）fork 不受影響：`pnpm-lock.yaml` 已是 `seroval@1.7.2`，高於修正版 1.6.3。觸發：#8624 合併後經 commit 軸帶入，屆時確認上述 4 筆告警（#112、#114、#116、#134）關閉 |
+| #8643 讓 Hermes 驅動的 agent 能發訊息 | `b37af7b` | Hermes 的 terminal 在獨立 gateway session，拿不到 `BUZZ_PRIVATE_KEY`；改為每個 Hermes ACP session 掛 `buzz-dev-mcp`。動 `crates/buzz-acp`、desktop managed agents、pnpm 鎖檔。fork 沒改這些檔。觸發：合併後經 commit 軸帶入；若維護者在本 fork 跑 Hermes agent 遇到 `BUZZ_PRIVATE_KEY is required`，那就是這個缺陷 |
+| #8613 PR 上變更的測試重跑十次 | `280cc23` | 動 CI workflow；合併後要重驗 fork 對 `_ci-rust.yml` 等的修補是否仍在 |
+| #8633 desktop 解釋非 relay URL（closed 未合併） | `09e6463` | 上游沒收，不處理 |
+
+其餘 open PR（#8611、#8614、#8615、#8621、#8622、#8623、#8625、#8627、#8632、#8635、#8636、#8637、#8638、#8639、#8640、#8642）：relay／acp／mobile／desktop 的功能與修正，fork 在這些路徑沒有分歧碼，合併後隨 commit 軸進來。
+
+### Issue 軸（3 筆）
+
+- **#8618**（closed，completed）：Windows 版 Buzz Desktop 不顯示共享圖片（macOS 與 mobile 正常）。與本 fork 的 Windows 主線直接相關，但上游關閉時沒有留言或連結修正 commit，無從比對。觸發：維護者在 Windows 桌面版看到破圖，就到上游確認修正所在的版本與 commit。
+- **#8619**（open）：用戶端時鐘快幾十秒，媒體讀取 token 只容許 +5 秒偏差，圖片全部無聲失敗。尚無修正。觸發：上游出現修正 PR。
+- **#8641**（open）：mobile thread 檢視重複推入同一 thread。mobile，fork 不建置。不處理。
+
+### 水位
+
+`tools/upstream_baseline.json`：`reviewed_through` → `24a370606044c0c7be787cc2fd98ec0bfe1d606b`，`reviewed_pr_through` → 8643，`reviewed_issue_through` → 8641，`reviewed_date` → 2026-10-28。
