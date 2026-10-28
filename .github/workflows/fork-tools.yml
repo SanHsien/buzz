@@ -14,6 +14,9 @@ on:
       - tools/**
       - tests/fork/**
       - .github/**
+  # Lets a maintainer re-run the fork gate on main without a path-matching push
+  # (for example after GitHub re-enables Actions on the fork).
+  workflow_dispatch:
 
 permissions:
   contents: read
