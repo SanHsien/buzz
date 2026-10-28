@@ -2,8 +2,8 @@
   "_comment": "Reviewed-but-not-now decisions for tools/check_dependency_freshness.py. Each entry needs deferredLatest and reason; it expires by itself once the registry passes that release. A permanent policy belongs on the declaring line as `# freshness-hold:` instead.",
   "deferrals": {
     "@mediapipe/tasks-vision": {
-      "deferredLatest": "1.1.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "1.2.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 1.2.0."
     },
     "@tauri-apps/api": {
       "deferredLatest": "2.12.4",
@@ -134,8 +134,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "k8s-openapi": {
-      "deferredLatest": "0.28.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "0.29.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 0.29.0."
     },
     "keyring": {
       "deferredLatest": "4.2.0",
@@ -158,8 +158,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "motion": {
-      "deferredLatest": "14.6.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "14.7.1",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 14.7.1."
     },
     "neteq": {
       "deferredLatest": "0.9.1",
@@ -202,8 +202,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "rmcp": {
-      "deferredLatest": "3.7.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "3.8.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 3.8.0."
     },
     "rodio": {
       "deferredLatest": "0.23.0",
@@ -226,8 +226,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "sherpa-onnx": {
-      "deferredLatest": "2.0.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "2.0.1",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 2.0.1."
     },
     "swatinem/rust-cache": {
       "deferredLatest": "2.9.3",
@@ -278,8 +278,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "virtua": {
-      "deferredLatest": "0.53.6",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "0.54.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 0.54.0."
     },
     "vitest": {
       "deferredLatest": "5.0.5",
