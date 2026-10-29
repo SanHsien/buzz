@@ -1,0 +1,1107 @@
+{
+  "date": "2026-10-30",
+  "observed_at": "2026-10-29T18:57:29.150075+00:00",
+  "local_head": "3bfb2b541844cbe698f04f72eb3731581da2c7bd",
+  "commit_range": [
+    "39b8b2b6a6d065b3da981e096b1a3881f1c63fd4",
+    "6d719c680a85c98153324809988be37425fba73e"
+  ],
+  "results": [
+    {
+      "type": "commit",
+      "sha": "a7e65c91da4937c6f825681c3f124b83380635a4",
+      "title": "feat(mobile): choose remote agent models and gate agents on Builderlab sign-in (#8650)",
+      "parents": [
+        "39b8b2b6a6d065b3da981e096b1a3881f1c63fd4"
+      ],
+      "endpoint": "repos/block/buzz/commits/a7e65c91da4937c6f825681c3f124b83380635a4",
+      "sha256": "898e496d64d8b5e8d7cb6972ad0f9f95ec5dfec5f3d2a04bb672ee177e1d573d",
+      "bytes": 68154,
+      "files": [
+        "mobile/lib/features/agents/agent_model_picker.dart",
+        "mobile/lib/features/agents/agents_sheet.dart",
+        "mobile/lib/features/agents/create_agent_sheet.dart",
+        "mobile/lib/features/agents/delete_agent_action.dart",
+        "mobile/lib/features/channels/channels_page.dart",
+        "mobile/lib/features/channels/channels_page/sheets.dart",
+        "mobile/lib/shared/agents/remote_agents.dart",
+        "mobile/lib/shared/hosted/builderlab_account.dart",
+        "mobile/lib/shared/widgets/buzz_setting_menu.dart",
+        "mobile/test/features/agents/agents_harness.dart",
+        "mobile/test/features/agents/agents_retry_test.dart",
+        "mobile/test/features/agents/agents_sign_out_busy_test.dart",
+        "mobile/test/features/agents/agents_sign_out_test.dart",
+        "mobile/test/features/agents/create_agent_sheet_test.dart",
+        "mobile/test/helpers/remote_agents_fixture.dart",
+        "mobile/test/shared/agents/remote_agents_test.dart"
+      ],
+      "added_lines": 863,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "模型／effort 選擇取自服務目錄，Builderlab 登入控制建立入口；需驗證跨社群、登出中建立、失敗重試與 hosted defines 的原生流程。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "770ab7ff82d704d96870d6043346d3fca181eb8d",
+      "title": "perf(mobile): decode relay query responses off the UI isolate (#8669)",
+      "parents": [
+        "a7e65c91da4937c6f825681c3f124b83380635a4"
+      ],
+      "endpoint": "repos/block/buzz/commits/770ab7ff82d704d96870d6043346d3fca181eb8d",
+      "sha256": "04baaa1ce30922384604aedb453ca7b41a6e8adb6170dc482c5922f3e9975064",
+      "bytes": 23322,
+      "files": [
+        "mobile/lib/shared/relay/relay_http_query_client.dart",
+        "mobile/lib/shared/relay/relay_query_response.dart",
+        "mobile/lib/shared/relay/relay_session.dart",
+        "mobile/test/helpers/fake_relay.dart",
+        "mobile/test/shared/relay/relay_http_query_client_test.dart",
+        "mobile/test/shared/relay/relay_session_test.dart"
+      ],
+      "added_lines": 483,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "成功回應改由 isolate 解壓與解析，保留前後 generation 檢查；需驗證 gzip、錯誤、退役與大回應，且錯誤解壓上限另見 #8689，不能只採成功路徑就宣稱資源已受限。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "8161a7cad02f32261a7bae00b33109b76743b0cb",
+      "title": "perf(mobile): derive public keys with native libsecp256k1 (#8655)",
+      "parents": [
+        "770ab7ff82d704d96870d6043346d3fca181eb8d"
+      ],
+      "endpoint": "repos/block/buzz/commits/8161a7cad02f32261a7bae00b33109b76743b0cb",
+      "sha256": "7d59c286f1ca161d0561a96786779908b616bd7955ab3f29399f5b84a99407f3",
+      "bytes": 13464,
+      "files": [
+        "mobile/lib/features/channels/agent_activity/observer_subscription.dart",
+        "mobile/lib/features/profile/user_status_provider.dart",
+        "mobile/lib/features/settings/settings_page.dart",
+        "mobile/lib/features/settings/settings_page/connection_section.dart",
+        "mobile/lib/shared/community/community_provider.dart",
+        "mobile/lib/shared/hosted/hpke_backup.dart",
+        "mobile/lib/shared/me/me_sync.dart",
+        "mobile/lib/shared/push/dev_push_lease.dart",
+        "mobile/lib/shared/push/push_lease_revocation_outbox.dart",
+        "mobile/lib/shared/relay/relay_provider.dart",
+        "mobile/lib/shared/relay/signed_event_relay.dart",
+        "mobile/test/features/settings/connection_section_test.dart"
+      ],
+      "added_lines": 81,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "公鑰推導改走原生 libsecp256k1，依賴前批 #8654 套件；前批拒收未解除，且需 iOS／Android 跨實作向量與 ABI 驗收。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "0d19ca69d3001520baa676172d6b7b250359bf18",
+      "title": "fix(mobile): wait for app activation before browser auth (#8647)",
+      "parents": [
+        "8161a7cad02f32261a7bae00b33109b76743b0cb"
+      ],
+      "endpoint": "repos/block/buzz/commits/0d19ca69d3001520baa676172d6b7b250359bf18",
+      "sha256": "abb1ef246f10266090a87c1cd8605b177a8bde57b05e23f622cd4ee39172da45",
+      "bytes": 15086,
+      "files": [
+        "mobile/ios/Runner.xcodeproj/project.pbxproj",
+        "mobile/ios/Runner/AppDelegate.swift",
+        "mobile/ios/Runner/BuzzBrowserAuthBridge.swift",
+        "mobile/ios/RunnerTests/BrowserAuthBridgeTests.swift"
+      ],
+      "added_lines": 183,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "iOS browser auth 等待 app activation，涉及 scene lifecycle、取消與多次回呼；需實機登入回跳及原生 bridge 測試。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "5ea5ae1727fc6701a6b06595f0f920ec4f079b52",
+      "title": "fix(desktop): always flash a linked message in the channel timeline (#8660)",
+      "parents": [
+        "0d19ca69d3001520baa676172d6b7b250359bf18"
+      ],
+      "endpoint": "repos/block/buzz/commits/5ea5ae1727fc6701a6b06595f0f920ec4f079b52",
+      "sha256": "7ed66682251ee4f2125d545fd28939a42559b79d57beaff03f990738d3a10ea6",
+      "bytes": 26983,
+      "files": [
+        "desktop/playwright.config.ts",
+        "desktop/src/features/messages/lib/virtualizedTimelineItems.test.mjs",
+        "desktop/src/features/messages/lib/virtualizedTimelineItems.ts",
+        "desktop/src/features/messages/ui/MessageTimeline.tsx",
+        "desktop/src/features/messages/ui/TimelineMessageList.tsx",
+        "desktop/src/features/messages/ui/useAnchoredScroll.lifecycle.test.mjs",
+        "desktop/src/features/messages/ui/useAnchoredScroll.ts",
+        "desktop/tests/e2e/message-target-highlight.spec.ts"
+      ],
+      "added_lines": 395,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "linked-message flash 改動虛擬列表與 anchored scroll；需桌面深連結、已載入／需載入目標、鍵盤與重複跳轉流程。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "8abcf2ea2a416c5cfceba797cb14487c3612b190",
+      "title": "fix(mobile): keep read state across reconnects and resume (#8672)",
+      "parents": [
+        "5ea5ae1727fc6701a6b06595f0f920ec4f079b52"
+      ],
+      "endpoint": "repos/block/buzz/commits/8abcf2ea2a416c5cfceba797cb14487c3612b190",
+      "sha256": "d468d6ce708711f2ffc9e3e605ae0d76eaa0da9863a05465641fd997261abbab",
+      "bytes": 17858,
+      "files": [
+        "mobile/lib/shared/read_state/read_state_manager.dart",
+        "mobile/lib/shared/read_state/read_state_provider.dart",
+        "mobile/test/features/channels/read_state/read_state_manager_test.dart",
+        "mobile/test/features/channels/read_state/read_state_provider_test.dart"
+      ],
+      "added_lines": 336,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "read-state 跨 reconnect／resume 保留，需驗證持久化失敗、重連競態及社群切換不回寫舊狀態。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "e922dc08ffd08f21d20fa0900f5f109eb0a22c98",
+      "title": "Unify mobile onboarding and community entry screens (#8687)",
+      "parents": [
+        "8abcf2ea2a416c5cfceba797cb14487c3612b190"
+      ],
+      "endpoint": "repos/block/buzz/commits/e922dc08ffd08f21d20fa0900f5f109eb0a22c98",
+      "sha256": "10dc655cb0ad5cb4cfef058f30414f390fba550b44790b5c800db75e3aebdd14",
+      "bytes": 198390,
+      "files": [
+        "mobile/ios/Runner/NativeProfileSetup.swift",
+        "mobile/lib/features/channels/channels_page.dart",
+        "mobile/lib/features/channels/channels_page/community_switcher.dart",
+        "mobile/lib/features/onboarding/hosted_community_selection.dart",
+        "mobile/lib/features/onboarding/hosted_connect_page.dart",
+        "mobile/lib/features/onboarding/hosted_connect_sheet.dart",
+        "mobile/lib/features/onboarding/hosted_join_policy_view.dart",
+        "mobile/lib/features/onboarding/self_hosted_entry_sheet.dart",
+        "mobile/lib/features/pairing/add_community_page.dart",
+        "mobile/lib/features/pairing/add_community_page/add_community_connection.dart",
+        "mobile/lib/features/pairing/add_community_page/add_community_form.dart",
+        "mobile/lib/features/pairing/add_community_page/pairing_reveal_surface.dart",
+        "mobile/lib/features/pairing/community_link_focus.dart",
+        "mobile/lib/features/pairing/pairing_page.dart",
+        "mobile/lib/features/pairing/pairing_page/community_link_form.dart",
+        "mobile/lib/features/pairing/pairing_page/onboarding_connection_view.dart",
+        "mobile/lib/features/pairing/pairing_page/sas_verification_view.dart",
+        "mobile/lib/hosted_app_gate.dart",
+        "mobile/lib/onboarding_app_entry.dart",
+        "mobile/lib/shared/community/community_grid.dart",
+        "mobile/lib/shared/community/community_grid_add.dart",
+        "mobile/lib/shared/community/community_grid_option.dart",
+        "mobile/lib/shared/hosted/hosted_flow.dart",
+        "mobile/lib/shared/hosted/hosted_flow_provider.dart",
+        "mobile/lib/shared/identity_transfer/nsec_import_sheet.dart",
+        "mobile/lib/shared/theme/onboarding_typography.dart",
+        "mobile/lib/shared/theme/theme.dart",
+        "mobile/lib/shared/widgets/bee_loading_mark.dart",
+        "mobile/lib/shared/widgets/ios_community_link_input.dart",
+        "mobile/lib/shared/widgets/onboarding_loading_page.dart",
+        "mobile/lib/shared/widgets/onboarding_step_page.dart",
+        "mobile/test/features/channels/channels_page_test.dart",
+        "mobile/test/features/onboarding/fullscreen_onboarding_test.dart",
+        "mobile/test/features/onboarding/hosted_communities_test.dart",
+        "mobile/test/features/onboarding/hosted_journeys_test.dart",
+        "mobile/test/features/onboarding/onboarding_entry_routes_test.dart",
+        "mobile/test/features/pairing/pairing_page_test.dart",
+        "mobile/test/features/pairing/pairing_qr_scanner_test.dart",
+        "mobile/test/helpers/hosted_communities_fixture.dart",
+        "mobile/test/helpers/two_finger_double_tap.dart",
+        "mobile/test/shared/hosted/hosted_communities_flow_test.dart"
+      ],
+      "added_lines": 2918,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "統一 onboarding／community entry，涉及原生姓名輸入、帳號、配對與社群切換；需 hosted／self-hosted、取消與返回原生流程驗收。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "8caf8351c124a2a39f160e342587d427e8c32a51",
+      "title": "Add standalone owned-community deletion handlers (#8645)",
+      "parents": [
+        "e922dc08ffd08f21d20fa0900f5f109eb0a22c98"
+      ],
+      "endpoint": "repos/block/buzz/commits/8caf8351c124a2a39f160e342587d427e8c32a51",
+      "sha256": "2e15e3c6779d9ea7abfa55c29d0d57d1ccd4a3aaff788cbdbbbac968d67cc333",
+      "bytes": 75459,
+      "files": [
+        "crates/buzz-db/src/store/deletion.rs",
+        "crates/buzz-db/src/store/deletion/lookup.rs",
+        "crates/buzz-db/src/store/entity_deletion/mod.rs",
+        "crates/buzz-db/src/store/entity_deletion/observations.rs",
+        "crates/buzz-db/src/store/entity_deletion/stages.rs",
+        "crates/buzz-db/src/store/reaction.rs",
+        "crates/buzz-db/src/store/relay_invite.rs",
+        "crates/buzz-db/src/store/replaceable.rs",
+        "crates/buzz-deletion/src/community.rs",
+        "crates/buzz-deletion/src/lib.rs",
+        "crates/buzz-deletion/src/user.rs",
+        "crates/buzz-deletion/src/user/owned_community.rs",
+        "crates/buzz-deletion/src/user/owned_community/postgres_tests.rs",
+        "crates/buzz-deletion/src/user/summary.rs",
+        "crates/buzz-relay/src/api/git/transport.rs",
+        "crates/buzz-relay/src/handlers/ingest.rs",
+        "docs/user-deletion-owned-community-handlers.md"
+      ],
+      "added_lines": 1507,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "owned-community 刪除新增 standalone handlers；需連同 durable lease、admission、git 寫入 fence 與階段重試驗證，不拆散刪除邊界。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "aed4be8592bf512f3d345e28d3c76fe6b55e3134",
+      "title": "Add a scenario-driven relay load generator (#8636)",
+      "parents": [
+        "8caf8351c124a2a39f160e342587d427e8c32a51"
+      ],
+      "endpoint": "repos/block/buzz/commits/aed4be8592bf512f3d345e28d3c76fe6b55e3134",
+      "sha256": "ab481c566f7bb27c4d3e0a1e3d63746072b6c83adbf44aadaf6c0814a619e02d",
+      "bytes": 159671,
+      "files": [
+        "Cargo.lock",
+        "Justfile",
+        "crates/buzz-test-client/Cargo.toml",
+        "crates/buzz-test-client/src/bin/loadgen.rs",
+        "crates/buzz-test-client/src/bin/wamp_bench.rs",
+        "crates/buzz-test-client/src/lib.rs",
+        "crates/buzz-test-client/src/loadgen/identity.rs",
+        "crates/buzz-test-client/src/loadgen/mod.rs",
+        "crates/buzz-test-client/src/loadgen/net.rs",
+        "crates/buzz-test-client/src/loadgen/run.rs",
+        "crates/buzz-test-client/src/loadgen/scenario.rs",
+        "crates/buzz-test-client/src/loadgen/seed.rs",
+        "crates/buzz-test-client/src/loadgen/stats.rs",
+        "crates/buzz-ws-client/src/connection.rs",
+        "perf/LOADGEN.md",
+        "perf/scenarios/local-smoke.toml",
+        "scripts/run-tests.sh"
+      ],
+      "added_lines": 4074,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "新增 scenario-driven buzz-loadgen、seed／run 與鎖檔依賴，取代 wamp_bench；需受控本機 relay 驗證人口／分片、ramp 失敗終止、統計及清理，不在本輪建立負載資料。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "ae689ab54d716d6f6df6bf18c67f12a3a810ecfe",
+      "title": "fix(desktop): resume reconnect replay from the last live point (#8652)",
+      "parents": [
+        "aed4be8592bf512f3d345e28d3c76fe6b55e3134"
+      ],
+      "endpoint": "repos/block/buzz/commits/ae689ab54d716d6f6df6bf18c67f12a3a810ecfe",
+      "sha256": "cf71547994b436a9a4345bd76d01c662b3d485bf1a5961ed0e5c911426600ed1",
+      "bytes": 104896,
+      "files": [
+        "desktop/src/shared/api/relayClientResumeCursor.test.mjs",
+        "desktop/src/shared/api/relayClientSession.ts",
+        "desktop/src/shared/api/relayClientShared.ts",
+        "desktop/src/shared/api/relayClosedRecovery.test.mjs",
+        "desktop/src/shared/api/relayClosedRecovery.ts",
+        "desktop/src/shared/api/relayReconnectPolicy.test.mjs",
+        "desktop/src/shared/api/relayReconnectPolicy.ts",
+        "desktop/src/shared/api/relayReconnectReplay.test.mjs",
+        "desktop/src/shared/api/relayReconnectReplay.ts",
+        "desktop/src/shared/api/relayResumeCursor.test.mjs",
+        "desktop/src/shared/api/relayResumeCursor.ts",
+        "desktop/tests/e2e/relay-reconnect.spec.ts"
+      ],
+      "added_lines": 2102,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "reconnect replay 改從最後 live point 恢復，需驗證歷史回放與 live 交接無缺口、錯誤 CLOSED、重連與社群隔離。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "3dbc95c3f668547e501c7d5f306d85ca5dcd055e",
+      "title": "perf(mobile): compute NIP-44 ECDH with native libsecp256k1 (#8656)",
+      "parents": [
+        "ae689ab54d716d6f6df6bf18c67f12a3a810ecfe"
+      ],
+      "endpoint": "repos/block/buzz/commits/3dbc95c3f668547e501c7d5f306d85ca5dcd055e",
+      "sha256": "3e0fffe5354a83f55a13ec8e500897f9f83a23b77952ec888e3feabaa3fd79a7",
+      "bytes": 5087,
+      "files": [
+        "mobile/lib/shared/crypto/ecdh.dart",
+        "mobile/test/shared/crypto/ecdh_test.dart"
+      ],
+      "added_lines": 93,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "NIP-44 ECDH 改走原生套件；依賴前批拒收的 #8654，需跨實作向量、錯誤公鑰及原生平台驗收。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "cc28660c6117fb54d176b697b0db1059ed336e1f",
+      "title": "fix(buzz-acp): spread 1012 reconnects and keep replay gaps across a dropped socket (#8653)",
+      "parents": [
+        "3dbc95c3f668547e501c7d5f306d85ca5dcd055e"
+      ],
+      "endpoint": "repos/block/buzz/commits/cc28660c6117fb54d176b697b0db1059ed336e1f",
+      "sha256": "e52973c278e616d9afd4dba12bc39a2e16b8e6f336647189463e8c7386cbd93d",
+      "bytes": 53597,
+      "files": [
+        "crates/buzz-acp/src/relay.rs",
+        "crates/buzz-acp/src/relay/recovery.rs",
+        "crates/buzz-acp/src/relay/resume_tests.rs"
+      ],
+      "added_lines": 1131,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "ACP 1012 重連採隨機延遲並保留 dropped-socket replay gap；需 harness 中斷／恢復及 shutdown 測試，並與 #8688／#8692 部署順序一起確認。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "f6d31d13e433da3c70158cc24f1107b2b2ca1143",
+      "title": "db: answer match-nothing event reads without taking a connection (#8663)",
+      "parents": [
+        "cc28660c6117fb54d176b697b0db1059ed336e1f"
+      ],
+      "endpoint": "repos/block/buzz/commits/f6d31d13e433da3c70158cc24f1107b2b2ca1143",
+      "sha256": "3e090a36c8435aa0486bbf902df9129c0041440bb268df0ba744422a90c85c3d",
+      "bytes": 9455,
+      "files": [
+        "crates/buzz-db/src/runtime/tests.rs",
+        "crates/buzz-db/src/store/event.rs"
+      ],
+      "added_lines": 162,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "match-nothing 讀取在取得連線前回傳空集合；需驗證各 filter 組合與空 kinds 語義、不取連線及歷史端點行為，不能由掃描代替 Postgres gate。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "0cde1fe2f40478d58c34f7a7113ea62759e353ec",
+      "title": "Make mobile Agents a full-page owned-agent directory (#8693)",
+      "parents": [
+        "f6d31d13e433da3c70158cc24f1107b2b2ca1143"
+      ],
+      "endpoint": "repos/block/buzz/commits/0cde1fe2f40478d58c34f7a7113ea62759e353ec",
+      "sha256": "ff988343f876db6606a50ad6bb18bfb11e4da7f6aa0320af82308555874020e8",
+      "bytes": 348176,
+      "files": [
+        "mobile/ios/Runner/JumpToLatestGlassButton.swift",
+        "mobile/lib/app.dart",
+        "mobile/lib/features/agents/agent_avatar_editor_page.dart",
+        "mobile/lib/features/agents/agent_avatar_picker.dart",
+        "mobile/lib/features/agents/agent_card.dart",
+        "mobile/lib/features/agents/agent_card_grid.dart",
+        "mobile/lib/features/agents/agent_model_info.dart",
+        "mobile/lib/features/agents/agent_model_menu.dart",
+        "mobile/lib/features/agents/agents_page.dart",
+        "mobile/lib/features/agents/agents_sheet.dart",
+        "mobile/lib/features/agents/bestie_agent_action.dart",
+        "mobile/lib/features/agents/create_agent_page.dart",
+        "mobile/lib/features/agents/create_agent_sheet.dart",
+        "mobile/lib/features/agents/delete_agent_action.dart",
+        "mobile/lib/features/agents/owned_agent_directory.dart",
+        "mobile/lib/features/agents/remote_agent_model_control.dart",
+        "mobile/lib/features/profile/avatar_background_grid.dart",
+        "mobile/lib/features/profile/avatar_editor_option_button.dart",
+        "mobile/lib/features/profile/camera_disposal_barrier.dart",
+        "mobile/lib/features/profile/emoji_avatar_tile.dart",
+        "mobile/lib/features/profile/image_avatar_capture.dart",
+        "mobile/lib/features/profile/profile_avatar_crop_page.dart",
+        "mobile/lib/features/profile/profile_avatar_editor.dart",
+        "mobile/lib/features/profile/profile_avatar_editor/emoji_avatar_picker.dart",
+        "mobile/lib/features/profile/user_profile_sheet.dart",
+        "mobile/lib/shared/agents/agent_avatar_catalog.dart",
+        "mobile/lib/shared/agents/remote_agents.dart",
+        "mobile/lib/shared/hosted/builderlab_account.dart",
+        "mobile/lib/shared/widgets/agent_artwork_panel.dart",
+        "mobile/lib/shared/widgets/android_expanding_menu_button.dart",
+        "mobile/lib/shared/widgets/avatar_background_grid.dart",
+        "mobile/lib/shared/widgets/avatar_editor_option_button.dart",
+        "mobile/lib/shared/widgets/avatar_image_source_controls.dart",
+        "mobile/lib/shared/widgets/camera_disposal_barrier.dart",
+        "mobile/lib/shared/widgets/emoji_avatar_controls.dart",
+        "mobile/lib/shared/widgets/emoji_avatar_tile.dart",
+        "mobile/lib/shared/widgets/frosted_app_bar.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/camera_preview.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/morphing_camera_action.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/shutter_button.dart",
+        "mobile/lib/shared/widgets/ios_glass_navigation_button.dart",
+        "mobile/lib/shared/widgets/ios_message_create_button.dart",
+        "mobile/lib/shared/widgets/profile_avatar_crop_page.dart",
+        "mobile/test/features/agents/agent_avatar_picker_test.dart",
+        "mobile/test/features/agents/agent_card_grid_test.dart",
+        "mobile/test/features/agents/agents_harness.dart",
+        "mobile/test/features/agents/agents_sheet_test.dart",
+        "mobile/test/features/agents/agents_sign_out_busy_test.dart",
+        "mobile/test/features/agents/agents_sign_out_test.dart",
+        "mobile/test/features/agents/create_agent_page_test.dart",
+        "mobile/test/features/agents/delete_agent_action_test.dart",
+        "mobile/test/features/agents/owned_agent_directory_test.dart",
+        "mobile/test/features/agents/remote_agent_model_control_test.dart",
+        "mobile/test/features/channels/channels_page_test.dart",
+        "mobile/test/features/channels/me/me_unread_test.dart",
+        "mobile/test/features/home/home_page_test.dart",
+        "mobile/test/features/settings/settings_overlay_test.dart",
+        "mobile/test/helpers/hosted_communities_fixture.dart",
+        "mobile/test/helpers/remote_agents_fixture.dart",
+        "mobile/test/shared/agents/remote_agents_test.dart",
+        "mobile/test/shared/hosted/device_identity_reconciliation_test.dart",
+        "mobile/test/shared/hosted/hosted_backup_service_test.dart"
+      ],
+      "added_lines": 5243,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "代理目錄改全頁、帳號共用 model catalog，新增 avatar／camera 與 Bestie 同步；需 owned-agent 身分隔離、登出／重試、相機與原生無障礙流程，PR 自述仍未確認最終實機、相機與 live Bestie，不當作 fork 驗收。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "commit",
+      "sha": "6d719c680a85c98153324809988be37425fba73e",
+      "title": "db: warm the relay read pool toward its ceiling at boot (#8651)",
+      "parents": [
+        "0cde1fe2f40478d58c34f7a7113ea62759e353ec"
+      ],
+      "endpoint": "repos/block/buzz/commits/6d719c680a85c98153324809988be37425fba73e",
+      "sha256": "1e3a9a3f6d0d965f73c9d6d75252788fee308484e83c0f8edb6297ed1dd9a179",
+      "bytes": 21806,
+      "files": [
+        "crates/buzz-db/src/runtime/mod.rs",
+        "crates/buzz-db/src/runtime/tests/reader_pool_postgres_tests.rs",
+        "crates/buzz-db/src/test_support.rs"
+      ],
+      "added_lines": 399,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "開機探測後以每波最多 5 條連線預熱到 reader ceiling，波數受限且失敗不阻擋 readiness；需 Postgres reader 不可達／部分取得、滾動部署總連線上限及與流量重疊時 writer fallback 驗收。",
+      "revisit": "具備受影響平台／資料庫驗收環境，連同依賴及既有 fork 修補一起同步；未通過前不採用。"
+    },
+    {
+      "type": "pr",
+      "number": 8689,
+      "title": "perf(mobile): decode relay error bodies off the UI isolate",
+      "head": "45253c9a35b7fd7d37721594ffad6bd1952106e9",
+      "base": "770ab7ff82d704d96870d6043346d3fca181eb8d",
+      "state": "CLOSED",
+      "updated_at": "2026-10-29T16:10:59Z",
+      "body_sha256": "1ec853ef1636d53dd603aab36074fd4b56138256145e11b50a9b8c0e6cf6079a",
+      "changed_files": 3,
+      "endpoint": "repos/block/buzz/compare/770ab7ff82d704d96870d6043346d3fca181eb8d...45253c9a35b7fd7d37721594ffad6bd1952106e9",
+      "sha256": "712426c23b297058dafbd33031b80266dc4137a5958faa420c3ce88f0ce7b9b5",
+      "bytes": 5910,
+      "files": [
+        "mobile/lib/shared/relay/relay_query_response.dart",
+        "mobile/lib/shared/relay/relay_session.dart",
+        "mobile/test/shared/relay/relay_session_test.dart"
+      ],
+      "added_lines": 112,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "skip",
+      "reason": "已關閉未合併；錯誤 gzip 解壓移到 isolate 並限 64 KiB，含退役檢查。未自行帶入已關閉來源；若替代修補合併，重驗 gzip bomb、429 及取消。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8690,
+      "title": "Revert \"fix(mobile): push every message in your own Solo chats (#8615)\"",
+      "head": "f7fdd476f6ad8f784e58b2dafad7efcff44eb50a",
+      "base": "0d19ca69d3001520baa676172d6b7b250359bf18",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T16:23:52Z",
+      "body_sha256": "364c7d47550700e9aca30eec2198d1805c4dcc6838752e6d5169dc17e591fe26",
+      "changed_files": 10,
+      "endpoint": "repos/block/buzz/compare/0d19ca69d3001520baa676172d6b7b250359bf18...f7fdd476f6ad8f784e58b2dafad7efcff44eb50a",
+      "sha256": "47ece2296077b815abbd1ac20e72cd2b842b3864e360a30745dd16c65a1df20c",
+      "bytes": 32971,
+      "files": [
+        "mobile/lib/features/settings/settings_page.dart",
+        "mobile/lib/features/settings/settings_page/notifications_section.dart",
+        "mobile/lib/shared/crypto/nip44.dart",
+        "mobile/lib/shared/push/dev_push_lease.dart",
+        "mobile/lib/shared/push/push_subscription.dart",
+        "mobile/lib/shared/push/push_subscription_provider.dart",
+        "mobile/test/features/settings/settings_page_test.dart",
+        "mobile/test/shared/crypto/nip44_interop_test.dart",
+        "mobile/test/shared/push/push_root_isolation_test.dart",
+        "mobile/test/shared/push/push_subscription_provider_test.dart"
+      ],
+      "added_lines": 49,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "撤回 #8615 的 Solo 全訊息 push 並移除 lease-size guards；本 fork 未帶入 #8615，不直接套反向修補。等待上游合併並核對實際基底，再驗證 mention-only、DM、租約大小與 NIP-44 邊界。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8691,
+      "title": "fix(mobile): address #8650 second-pass review",
+      "head": "2fa20c19722e5d1d0471c4166680dcb8a1eaf97e",
+      "base": "e922dc08ffd08f21d20fa0900f5f109eb0a22c98",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T16:40:48Z",
+      "body_sha256": "055e00473ff2c7fdc9cb04d23510fa83e276602fc8ce3032c1dff9dcc019dfba",
+      "changed_files": 5,
+      "endpoint": "repos/block/buzz/compare/e922dc08ffd08f21d20fa0900f5f109eb0a22c98...2fa20c19722e5d1d0471c4166680dcb8a1eaf97e",
+      "sha256": "2cdd5bb8fe8fa4efb24a0fd3d2f619696a7536f5a97d817365758cf0b6ad3382",
+      "bytes": 14387,
+      "files": [
+        "mobile/lib/features/agents/agents_sheet.dart",
+        "mobile/lib/shared/widgets/buzz_setting_menu.dart",
+        "mobile/test/features/agents/agents_harness.dart",
+        "mobile/test/features/agents/agents_unsupported_community_test.dart",
+        "mobile/test/shared/widgets/buzz_setting_menu_test.dart"
+      ],
+      "added_lines": 180,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "修 #8650 reload 時 community 為空、設定選單 semantics 及不支援遠端社群的錯誤提示；需與 #8650／#8693 目錄重構一起核對，測試 Add、VoiceOver 與 reload／sign-out。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8692,
+      "title": "fix(relay): close a REQ whose history read failed instead of sending EOSE",
+      "head": "95a8255a60ce0c8bd492856d3d37819bf5ee2ed8",
+      "base": "e922dc08ffd08f21d20fa0900f5f109eb0a22c98",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T17:02:02Z",
+      "body_sha256": "f87e3f4a2451838ecbbd7a996008c10102ab81c40757fa1d8eb9c185e5f3a871",
+      "changed_files": 4,
+      "endpoint": "repos/block/buzz/compare/e922dc08ffd08f21d20fa0900f5f109eb0a22c98...95a8255a60ce0c8bd492856d3d37819bf5ee2ed8",
+      "sha256": "4c4f02959a30fdef89b98010739961937f17b226d1ab2aa4b3c4d669c8bc7fd1",
+      "bytes": 14290,
+      "files": [
+        "ARCHITECTURE.md",
+        "crates/buzz-relay/src/api/bridge.rs",
+        "crates/buzz-relay/src/handlers/count.rs",
+        "crates/buzz-relay/src/handlers/req.rs"
+      ],
+      "added_lines": 142,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 1
+      },
+      "flag_samples": [
+        {
+          "file": "ARCHITECTURE.md",
+          "length": 548,
+          "sample": "After registering, the REQ handler queries Postgres for stored events matching the filters (up to 500 per filter, hard cap). These are sent as `[\"EVENT\", sub_id, event]` frames bef"
+        }
+      ],
+      "decision": "skip",
+      "reason": "新增 ARCHITECTURE.md 說明行長 548，超過既有 400 字元拒收門檻；未自行豁免文件。語義上將歷史 DB 失敗從 EOSE 改為 CLOSED，需符合政策的修訂或維護者明確決定，再依其宣告先部署 relay、後 #8688，驗證失敗清理與重播。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8693,
+      "title": "Make mobile Agents a full-page owned-agent directory",
+      "head": "246cbbeaaf5c8152d5c6aabc3ccc969f9689b7f5",
+      "base": "8caf8351c124a2a39f160e342587d427e8c32a51",
+      "state": "MERGED",
+      "updated_at": "2026-10-29T18:30:21Z",
+      "body_sha256": "a623cccc13b6fc1aba678c903fa6b54c964d78d3740f581db1653ceb32e781cf",
+      "changed_files": 63,
+      "endpoint": "repos/block/buzz/compare/8caf8351c124a2a39f160e342587d427e8c32a51...246cbbeaaf5c8152d5c6aabc3ccc969f9689b7f5",
+      "sha256": "ff988343f876db6606a50ad6bb18bfb11e4da7f6aa0320af82308555874020e8",
+      "bytes": 348176,
+      "files": [
+        "mobile/ios/Runner/JumpToLatestGlassButton.swift",
+        "mobile/lib/app.dart",
+        "mobile/lib/features/agents/agent_avatar_editor_page.dart",
+        "mobile/lib/features/agents/agent_avatar_picker.dart",
+        "mobile/lib/features/agents/agent_card.dart",
+        "mobile/lib/features/agents/agent_card_grid.dart",
+        "mobile/lib/features/agents/agent_model_info.dart",
+        "mobile/lib/features/agents/agent_model_menu.dart",
+        "mobile/lib/features/agents/agents_page.dart",
+        "mobile/lib/features/agents/agents_sheet.dart",
+        "mobile/lib/features/agents/bestie_agent_action.dart",
+        "mobile/lib/features/agents/create_agent_page.dart",
+        "mobile/lib/features/agents/create_agent_sheet.dart",
+        "mobile/lib/features/agents/delete_agent_action.dart",
+        "mobile/lib/features/agents/owned_agent_directory.dart",
+        "mobile/lib/features/agents/remote_agent_model_control.dart",
+        "mobile/lib/features/profile/avatar_background_grid.dart",
+        "mobile/lib/features/profile/avatar_editor_option_button.dart",
+        "mobile/lib/features/profile/camera_disposal_barrier.dart",
+        "mobile/lib/features/profile/emoji_avatar_tile.dart",
+        "mobile/lib/features/profile/image_avatar_capture.dart",
+        "mobile/lib/features/profile/profile_avatar_crop_page.dart",
+        "mobile/lib/features/profile/profile_avatar_editor.dart",
+        "mobile/lib/features/profile/profile_avatar_editor/emoji_avatar_picker.dart",
+        "mobile/lib/features/profile/user_profile_sheet.dart",
+        "mobile/lib/shared/agents/agent_avatar_catalog.dart",
+        "mobile/lib/shared/agents/remote_agents.dart",
+        "mobile/lib/shared/hosted/builderlab_account.dart",
+        "mobile/lib/shared/widgets/agent_artwork_panel.dart",
+        "mobile/lib/shared/widgets/android_expanding_menu_button.dart",
+        "mobile/lib/shared/widgets/avatar_background_grid.dart",
+        "mobile/lib/shared/widgets/avatar_editor_option_button.dart",
+        "mobile/lib/shared/widgets/avatar_image_source_controls.dart",
+        "mobile/lib/shared/widgets/camera_disposal_barrier.dart",
+        "mobile/lib/shared/widgets/emoji_avatar_controls.dart",
+        "mobile/lib/shared/widgets/emoji_avatar_tile.dart",
+        "mobile/lib/shared/widgets/frosted_app_bar.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/camera_preview.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/morphing_camera_action.dart",
+        "mobile/lib/shared/widgets/image_avatar_capture/shutter_button.dart",
+        "mobile/lib/shared/widgets/ios_glass_navigation_button.dart",
+        "mobile/lib/shared/widgets/ios_message_create_button.dart",
+        "mobile/lib/shared/widgets/profile_avatar_crop_page.dart",
+        "mobile/test/features/agents/agent_avatar_picker_test.dart",
+        "mobile/test/features/agents/agent_card_grid_test.dart",
+        "mobile/test/features/agents/agents_harness.dart",
+        "mobile/test/features/agents/agents_sheet_test.dart",
+        "mobile/test/features/agents/agents_sign_out_busy_test.dart",
+        "mobile/test/features/agents/agents_sign_out_test.dart",
+        "mobile/test/features/agents/create_agent_page_test.dart",
+        "mobile/test/features/agents/delete_agent_action_test.dart",
+        "mobile/test/features/agents/owned_agent_directory_test.dart",
+        "mobile/test/features/agents/remote_agent_model_control_test.dart",
+        "mobile/test/features/channels/channels_page_test.dart",
+        "mobile/test/features/channels/me/me_unread_test.dart",
+        "mobile/test/features/home/home_page_test.dart",
+        "mobile/test/features/settings/settings_overlay_test.dart",
+        "mobile/test/helpers/hosted_communities_fixture.dart",
+        "mobile/test/helpers/remote_agents_fixture.dart",
+        "mobile/test/shared/agents/remote_agents_test.dart",
+        "mobile/test/shared/hosted/device_identity_reconciliation_test.dart",
+        "mobile/test/shared/hosted/hosted_backup_service_test.dart"
+      ],
+      "added_lines": 5243,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "代理目錄改全頁、帳號共用 model catalog，新增 avatar／camera 與 Bestie 同步；需 owned-agent 身分隔離、登出／重試、相機與原生無障礙流程，PR 自述仍未確認最終實機、相機與 live Bestie，不當作 fork 驗收。 已合併，同一變更的 commit 0cde1fe 已另在 commit 軸裁決，未實際採用。",
+      "revisit": "依 commit 軸的整合與原生驗收條件。"
+    },
+    {
+      "type": "pr",
+      "number": 8694,
+      "title": "fix: don't notify workflow owners through their attribution tag",
+      "head": "777107fdbec39c30a4d0b5a62c5e66921207dd20",
+      "base": "e922dc08ffd08f21d20fa0900f5f109eb0a22c98",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:28:42Z",
+      "body_sha256": "40c9d5a7294ffd1ff8f0027672d1efee537581399e86274078f0deb549ff49f1",
+      "changed_files": 13,
+      "endpoint": "repos/block/buzz/compare/e922dc08ffd08f21d20fa0900f5f109eb0a22c98...777107fdbec39c30a4d0b5a62c5e66921207dd20",
+      "sha256": "2dcb139cd6f555b9445d0213d837736758a82e749485abca806e20bbfcc3001d",
+      "bytes": 37392,
+      "files": [
+        "crates/buzz-core/src/filter.rs",
+        "crates/buzz-db/src/runtime/mod.rs",
+        "crates/buzz-db/src/store/operator_listener.rs",
+        "crates/buzz-relay/src/push_runtime.rs",
+        "crates/buzz-relay/src/workflow_sink.rs",
+        "docs/buzz-push.md",
+        "mobile/lib/features/activity/activity_provider.dart",
+        "mobile/lib/features/channels/unread_badge/is_high_priority_event.dart",
+        "mobile/lib/features/channels/unread_badge/should_notify_for_event.dart",
+        "mobile/lib/shared/mentions/mention_tags.dart",
+        "mobile/test/features/activity/activity_provider_test.dart",
+        "mobile/test/features/channels/unread_badge/owner_attribution_test.dart",
+        "mobile/test/shared/mentions/mention_rules_test.dart"
+      ],
+      "added_lines": 572,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "以 buzz:workflow 與 p-tag owner marker 區分歸屬和 mention，橫跨 core filter、DB event_mentions、push／operator listener 與 mobile；需驗證真正 mention owner 仍通知、歷史／live 一致及舊資料處理，不只改單一用戶端。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8695,
+      "title": "mobile: stop typing prune ticks from rebuilding channel pages",
+      "head": "8b8a16845e5a7e455712623326128a1ba709a3a4",
+      "base": "8caf8351c124a2a39f160e342587d427e8c32a51",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:05:55Z",
+      "body_sha256": "f74faede071fb7537ada0ceec4e32696f67137d26ab6971005ff74b9cebc8190",
+      "changed_files": 4,
+      "endpoint": "repos/block/buzz/compare/8caf8351c124a2a39f160e342587d427e8c32a51...8b8a16845e5a7e455712623326128a1ba709a3a4",
+      "sha256": "6fafddaea4b0770f7f56ad0fabb789a51f0963b17fc3e1881c38189e0f2f844a",
+      "bytes": 8720,
+      "files": [
+        "mobile/lib/features/channels/channel_detail_page.dart",
+        "mobile/lib/features/channels/channel_typing_provider.dart",
+        "mobile/lib/features/channels/thread_detail_page.dart",
+        "mobile/test/features/channels/channel_typing_provider_test.dart"
+      ],
+      "added_lines": 144,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "typing prune 只在值改變時發布，頁面訂閱排除自己且符合 thread scope 的 VisibleTyping；需驗證到期、自己 echo、他人／thread 切換與原生輸入延遲。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8696,
+      "title": "Retire the 0032 roster trigger in migration 0076",
+      "head": "d835556200dce52c0b50c6d1c24816c59fd0ca91",
+      "base": "3dbc95c3f668547e501c7d5f306d85ca5dcd055e",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:27:24Z",
+      "body_sha256": "70606f8f4abb8c023160ebfb649c055328ceca6536b5b27c663cd15f21c94076",
+      "changed_files": 10,
+      "endpoint": "repos/block/buzz/compare/3dbc95c3f668547e501c7d5f306d85ca5dcd055e...d835556200dce52c0b50c6d1c24816c59fd0ca91",
+      "sha256": "b391f2d9ec1d6cd1b14cf87909095dbd637f8d3d8858080dbbda1dd4a620ba5d",
+      "bytes": 47060,
+      "files": [
+        "crates/buzz-db/src/runtime/migration.rs",
+        "crates/buzz-db/src/store/channel_members.rs",
+        "crates/buzz-db/src/store/relay_invite/upgrade_postgres_tests.rs",
+        "crates/buzz-db/src/store/replaceable.rs",
+        "crates/buzz-relay/src/handlers/side_effects.rs",
+        "migrations/0076_retire_channel_roster_trigger.sql",
+        "schema/functions/guard_channel_roster_snapshot.sql",
+        "schema/schema.sql",
+        "schema/triggers/events.sql",
+        "scripts/reconcile-schema-after-pgschema.sql"
+      ],
+      "added_lines": 106,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "0076 以 1s lock_timeout／5s statement_timeout 移除 roster trigger／function，更新 desired-state 與 reconcile；方向符合 docs/database.md，但本 fork 尚未採 #8611，不可提早撤資料庫防護。需先部署應用端替代，再驗證 migration／desired-state、pgschema 重套與現有 relay 相容。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8697,
+      "title": "docs(buzz-acp): fix stale prepare_reconnect doc comment",
+      "head": "3e495d73e1dbbd7f73271b0fb754236f71bdfca3",
+      "base": "f6d31d13e433da3c70158cc24f1107b2b2ca1143",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:23:20Z",
+      "body_sha256": "b1212ab159259aab4a86c7a83fba2ceb44de19dd7b7f10d57444b95979bc8a6c",
+      "changed_files": 1,
+      "endpoint": "repos/block/buzz/compare/f6d31d13e433da3c70158cc24f1107b2b2ca1143...3e495d73e1dbbd7f73271b0fb754236f71bdfca3",
+      "sha256": "33f8d37ae07d08837eb8447d9bf2979423cbb8206bee6ee118503385bfef9a60",
+      "bytes": 692,
+      "files": [
+        "crates/buzz-acp/src/relay.rs"
+      ],
+      "added_lines": 1,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "只把 prepare_reconnect 註解中的 real clock and RNG 改為 real RNG，與 #8653 後實作對齊；不獨立 cherry-pick 上游仍開放的 PR，合併後隨對應 ACP 同步核對。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8698,
+      "title": "Add standalone user message deletion handler",
+      "head": "ef85d468f7cf2feeea5139050307ace84d40b75f",
+      "base": "f6d31d13e433da3c70158cc24f1107b2b2ca1143",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:54:38Z",
+      "body_sha256": "b6edca2b45d02ab2fffc2827904da83e4b938d80d1ab010e308b929e72de9558",
+      "changed_files": 9,
+      "endpoint": "repos/block/buzz/compare/f6d31d13e433da3c70158cc24f1107b2b2ca1143...ef85d468f7cf2feeea5139050307ace84d40b75f",
+      "sha256": "60039b992f6cfb47fad059b4ee1714fc0315042713cd9b1c4ca243b63bce2f31",
+      "bytes": 66849,
+      "files": [
+        "crates/buzz-db/src/store/thread_window.rs",
+        "crates/buzz-db/src/store/user_deletion/messages/cleanup.rs",
+        "crates/buzz-db/src/store/user_deletion/messages/mod.rs",
+        "crates/buzz-db/src/store/user_deletion/messages/select.sql",
+        "crates/buzz-db/src/store/user_deletion/mod.rs",
+        "crates/buzz-deletion/src/user.rs",
+        "crates/buzz-deletion/src/user/messages.rs",
+        "crates/buzz-deletion/src/user/messages/README.md",
+        "crates/buzz-deletion/src/user/messages/postgres_tests.rs"
+      ],
+      "added_lines": 1553,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "standalone purge_messages 以 request lease／approved inventory 按 thread 批次刪除，同交易修計數並拒絕未清理附件；未接 dispatcher。需驗證他人回覆／tombstone 保留、租約失效、授權與重試，不能把 handler 當完整使用者刪除流程。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    },
+    {
+      "type": "pr",
+      "number": 8699,
+      "title": "Fix/workflow duration validation",
+      "head": "477f9b0689fef5bcf508048251b632146015404e",
+      "base": "6d719c680a85c98153324809988be37425fba73e",
+      "state": "OPEN",
+      "updated_at": "2026-10-29T18:54:40Z",
+      "body_sha256": "3ccfad89acaa4c1461164e94a9603ec5652ad3eddb3dbf78afcdb5bfaa0fb476",
+      "changed_files": 10,
+      "endpoint": "repos/block/buzz/compare/6d719c680a85c98153324809988be37425fba73e...477f9b0689fef5bcf508048251b632146015404e",
+      "sha256": "5952683def2a016c401d0ed615bdb499c124d1166325dfaa965d95b2d49e94d1",
+      "bytes": 33641,
+      "files": [
+        "bin/.node-24.21.0.pkg",
+        "bin/corepack",
+        "bin/node",
+        "bin/npm",
+        "bin/npx",
+        "crates/buzz-relay/src/api/workflows.rs",
+        "crates/buzz-relay/src/router.rs",
+        "crates/buzz-workflow/src/executor.rs",
+        "crates/buzz-workflow/src/lib.rs",
+        "crates/buzz-workflow/src/schema.rs"
+      ],
+      "added_lines": 533,
+      "scan_counts": {
+        "dynamic": 0,
+        "control": 0,
+        "encoded": 0,
+        "inline_space": 0,
+        "long_line": 0
+      },
+      "flag_samples": [],
+      "decision": "defer",
+      "reason": "不只 duration validation：同時升 Node 24.15→24.21、新增 approval decide HTTP endpoint，改授權方法、approval context 與 days／delay 限制；PR 描述仍為空模板。需維護者確認新 HTTP 面符合產品約定，補齊 NIP-98 方法／URL、跨社群／非 approver 拒絕、重送與期限測試後再考慮，不按標題視為小修。",
+      "revisit": "未合併來源等待上游合併或 head 改變後重審；拒收來源另需符合政策的修訂或維護者明確決定。"
+    }
+  ],
+  "issues": [],
+  "issue_listing": {
+    "endpoint": "repos/block/buzz/issues?state=all&sort=created&direction=desc&per_page=100",
+    "lowest_number": 8600,
+    "highest_number": 8699,
+    "reviewed_issue_through": 8684,
+    "new_issues": 0
+  },
+  "scan_patterns": {
+    "dynamic": "\\beval\\s*\\(|new\\s+Function\\s*\\(|global(?:This)?\\s*(?:\\.\\s*require|\\[\\s*[\\\"\\x27]require)",
+    "control": "[\\u200b-\\u200f\\u202a-\\u202e\\u2066-\\u2069\\ufeff]",
+    "encoded": "[A-Za-z0-9+/]{120,}={0,2}",
+    "inline_space": "\\S[^\\n]*? {40,}\\S"
+  },
+  "watermarks": {
+    "reviewed_through": "6d719c680a85c98153324809988be37425fba73e",
+    "reviewed_pr_through": 8699,
+    "reviewed_issue_through": 8684
+  },
+  "scan_scope": "僅新增行的靜態拒收掃描與採用風險裁決；非完整正確性／安全審計。PR diff 檔案數與 metadata 一致，base/head 固定完整 SHA；未採用產品變更。",
+  "verification": [
+    {
+      "command": "python tools/check_upstream_updates.py --strict",
+      "phase": "before update",
+      "exit_code": 1,
+      "tail": [
+        "15 upstream commit(s) require review.",
+        "11 new item(s) to triage.",
+        "No new items above that number."
+      ]
+    },
+    {
+      "command": "pwsh -NoProfile -File tools/dev_check.ps1",
+      "phase": "before update",
+      "exit_code": 0,
+      "tail": [
+        "29 passed in 0.54s",
+        "OK"
+      ]
+    },
+    {
+      "command": "python tools/check_upstream_updates.py --strict",
+      "phase": "after update",
+      "exit_code": 0,
+      "tail": [
+        "No new upstream commits. Nothing to review.",
+        "PR #8699: No new items above that number.",
+        "Issue #8684: No new items above that number."
+      ]
+    },
+    {
+      "command": "pwsh -NoProfile -File tools/dev_check.ps1",
+      "phase": "after update",
+      "exit_code": 0,
+      "tail": [
+        "29 passed in 0.57s",
+        "OK"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "tail": []
+    }
+  ]
+}

@@ -267,3 +267,27 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 ### 水位
 
 `tools/upstream_baseline.json`：`reviewed_through` → `24a370606044c0c7be787cc2fd98ec0bfe1d606b`，`reviewed_pr_through` → 8643，`reviewed_issue_through` → 8641，`reviewed_date` → 2026-10-28。
+
+## 2026-10-29 上游差異初篩（未完成，不推進水位）
+
+固定快照 `24a3706..39b8b2b` 有 17 個新增 commit；PR 8644–8688 共 43 筆，新增 issue 為 #8674、#8684。清單、head 快照、初篩限制與驗證見 [本輪證據](UPSTREAM_REVIEW_2026-10-29.md)。
+
+本輪未採用產品變更：尚未完成 commit 逐筆採用審查與不可變 PR head 核對，亦無採用後 CI 證據。三個水位維持原值；路線圖列保留。維護工具完整 gate 通過（29 passed），不等於產品同步已驗收。
+
+既有條件變化：#8624 已關閉且未合併，不能再把它視為必然會合併的修補來源；#8643 仍開放。未擴大 advisory ignore，未宣稱任何安全告警已修復。沒有改動產品行為，符合 VISION.md 與 FORK.md 維持上游產品方向的約定。
+
+## 2026-10-30 接續上游逐筆裁決
+
+已接續上一節初篩；固定的 17 個 commit 逐筆裁決為 6 skip、11 defer，43 筆 PR 為 10 skip、33 defer，issue #8674、#8684 均 defer。逐筆完整 SHA、base、diff SHA-256、理由、重審條件及限制見 [正式裁決](UPSTREAM_REVIEW_2026-10-30.md) 與 [機器證據](UPSTREAM_REVIEW_2026-10-30.json)。11 個 PR head 已較初篩變動，使用本輪新 head，未沿用漂移 diff。
+
+沒有 adopt：pulldown-cmark 0.13.5 安全修補已在 fork，無需重複套用 #8644 的無關 syn 鎖檔變動；本批長行及 #8654 的長編碼／行內長空白依 UPSTREAM.md 拒收，不自行豁免文件、SQL、篩選式或公開向量；其餘變更依既有不自行分岔產品的政策延後，尚未做受影響平台／資料庫驗收。#8624 仍 closed、merged=false，路線圖改等替代修補或可相容的 selector 依賴鏈，不再單等該 PR。
+
+在 `pwsh -NoProfile -File tools/dev_check.ps1` exit 0（29 passed in 1.23s、OK）後，推進已審查水位：commit `39b8b2b6a6d065b3da981e096b1a3881f1c63fd4`、PR 8688、issue 8684、日期 2026-10-30。這不代表產品已同步；相對固定快照仍 ahead 46／behind 17，查詢時上游 main 又到 `f6d31d13e433da3c70158cc24f1107b2b2ca1143`，後續 commit 未納入。水位更新後再跑完整維護工具 gate，結果記於正式裁決。
+
+本輪只改文件／審查資料，不需採用後產品 CI；沒有宣稱 CI 已跑、任何告警已修復、維護者已驗收或 PR ready。完整產品同步與原生驗收仍列在 ROADMAP.md。
+
+## 2026-10-30 延伸至最新上游的增量裁決
+
+保留前輪完整裁決，另審 `39b8b2b6a6d065b3da981e096b1a3881f1c63fd4..6d719c680a85c98153324809988be37425fba73e` 的 15 個 commit（全部 defer），以及 PR #8689–#8699（2 skip、9 defer）。逐筆裁決及不可變 head 見 [正式裁決末節](UPSTREAM_REVIEW_2026-10-30.md#接續增量審至目前上游最新) 與 [增量機器證據](UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)。#8689 closed 未合併不採用；#8692 的 548 字元說明行依既有長行規則拒收，其 relay→ACP 部署順序仍需後續整合驗證。#8699 除 duration 外新增 approval decide HTTP endpoint、改授權及 Node 工具鏈，不能按標題當小修採用。
+
+state=all 清單核對至最新 #8699，沒有 #8684 以上的新 issue；保留 #8674、#8684 的 defer。三軸最新已審查水位為完整 commit `6d719c680a85c98153324809988be37425fba73e`、PR #8699、issue #8684（最後一軸最新編號未變）。這只代表審查完成，不代表產品同步或安全告警解除；同步延後變更仍在 ROADMAP.md，不再把後續增量審查綁在平台／資料庫條件下。

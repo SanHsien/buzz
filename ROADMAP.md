@@ -1,21 +1,21 @@
 # 路線圖
 
 > 本 repo 後續工作的單一真相源。做完一項，就在同一個 commit 刪掉那一列；新工作只加在這裡。
-> 現況段的數字是 2026-10-29 依 `main` `8c8b1f596216` 查的快照，開工前先重查 GitHub。
+> 現況段是 2026-10-30 依 `main` `3bfb2b541844` 與固定上游快照重查的結果；遠端 fork 與舊告警數本次未重查。
 
 ## 現況
-Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作區，fork 維持上游產品行為（[README](README.md)、[FORK](FORK.md)）。2026-10-29 `gh` 查詢顯示 CI、CodeQL、Fork tools 與 Upstream check 最近成功，但 Dependabot 仍開放 103 筆、Code scanning 161 筆，不能以工作流程成功推論安全告警已清除（2026-10-29 `gh` 查詢）。上游比較為 ahead 45／behind 4；實際採用仍須依水位與裁決，不能只看差距（2026-10-29 `gh` 查詢（上游比較）；[既有裁決](docs/fork/DECISIONS.md)）。
+Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作區，fork 維持上游產品行為（[README](README.md)、[FORK](FORK.md)）。2026-10-30 已逐筆裁決至上游 main `6d719c680a85c98153324809988be37425fba73e`：累計 32 個 commit（6 skip、26 defer）、54 筆 PR（12 skip、42 defer）與 2 筆 issue（均 defer），沒有採用產品變更。水位為該完整 commit／PR #8699／issue #8684；最新清單沒有新增 issue，故 issue 編號不變。維護工具 gate 為 29 passed；產品同步與原生驗收尚未完成。2026-10-29 的 Dependabot 103 筆、Code scanning 161 筆未重查，不視為目前告警數；#8624 已關閉未合併，等待替代修補（[本輪裁決](docs/fork/UPSTREAM_REVIEW_2026-10-30.md)、[增量證據](docs/fork/UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)、[既有裁決](docs/fork/DECISIONS.md)）。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 依水位審查新增上游差異 | 快照已有未同步 commit；舊版 Upstream check 成功不代表最新上游已審完 | 對照 `tools/upstream_baseline.json` 審 commit／PR／issue，核對 fork patch 清單與發布 guard；採用後維護工具 gate 及受影響 CI 通過，才推進水位 | Codex | tools/upstream_baseline.json；FORK.md；2026-10-29 `gh` 查詢 |
 | 同步前重跑 Tauri 鎖檔 advisory 盤點 | 根 workspace 的 cargo-deny 不涵蓋桌面鎖檔 | 執行 `cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories`，區分 vulnerability 與 unmaintained；對照既有 ignore，新增漏洞必須有修補或裁決，不擴大既有 ignore | Codex | docs/fork/DECISIONS.md:105-109 |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 隨上游採用編輯器與 selector 安全更新 | 上游 PR #8624 合併 | 按合併 commit 帶入；連結貼上回歸與 desktop 型別檢查通過，對應 Dependabot 告警 state=fixed | Codex | docs/fork/DECISIONS.md:254 |
+| 同步延後變更 | 可用受影響平台／Postgres 的完整驗收環境；本批長編碼／長行拒收需符合政策的修訂或維護者明確決定 | 依固定裁決逐筆帶入，保留 FORK.md 修補與發布 guard；重跑 Tauri advisory 盤點、維護工具及受影響產品閘門；提交後檢查 CI，不能把已審查水位當成產品同步完成 | Codex | docs/fork/UPSTREAM_REVIEW_2026-10-30.md；docs/fork/UPSTREAM_REVIEW_2026-10-30.json |
+| 隨上游採用編輯器與 selector 安全更新 | 取代已關閉未合併 #8624 的上游修補合併，或 typography 放寬 selector 版本且可由相容鎖檔更新解決 | 對照實際修補 commit 與依賴鏈帶入；連結貼上回歸與 desktop 型別檢查通過，對應 Dependabot 告警 state=fixed | Codex | docs/fork/UPSTREAM_REVIEW_2026-10-30.md「#8624 與路線圖」；docs/fork/DECISIONS.md |
 | 隨上游遷移 rmcp、glib 與 lru 依賴鏈 | 上游完成相容遷移或依賴鏈容許修補版 | 檢查 buzz-agent 實際依賴與兩份 Cargo.lock，跑受影響 Rust／Tauri gate；移除已不需要的 advisory ignore | Codex | docs/fork/DECISIONS.md:56、78、82-86；deny.toml |
 | 重評 benchmark 鎖檔與上游 CodeQL 風險 | 上游更新鎖檔／修正告警，或 fork 要執行 benchmark、變更部署暴露面 | 按既有裁決重做可達性評估；若要改來源先取得維護者決定，受影響測試通過並重查告警狀態 | Claude Opus | docs/fork/DECISIONS.md:74、86、212 |
 | 驗收 Hermes 發訊與 Windows 圖片流程 | 上游合併 #8643，或 Windows 使用者遇到圖片／時鐘偏差問題 | 維護者在實際桌面版驗證 Hermes 訊息抵達、圖片顯示；記錄版本與對應修正，不以瀏覽器測試取代原生結果 | 維護者 | docs/fork/DECISIONS.md「PR 軸」#8643、「Issue 軸」#8618、#8619 |
