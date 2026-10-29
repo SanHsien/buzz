@@ -513,3 +513,11 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 **沒做**：不加 retry、不拉長 timeout；不改 `injectCSS`（關掉之後仍要自己提供同樣規則，效果相同但多改一處）。
 
 **同批另見**：`inbox-edit.spec.ts:560`（`fill("")` 沒清掉內容）與 `video-attachment.spec.ts:1469`（右鍵選單逾時）的處理見下一節與 ROADMAP。
+
+## 2026-11-23（再續）`inbox-edit.spec.ts:560` 帶入上游 `428f0dcd2`
+
+- **現象**：run 45057281448 shard 5 第一次跑 `submitEmptyEdit` 的 `input.fill("")` 之後 `toBeEmpty()` 失敗（重試通過）。
+- **根因（上游 #8682 已查明）**：進入編輯模式時 app 以 RAF、巢狀 RAF 加 ProseMirror 20 ms 選取同步把游標移到結尾；`fill("")` 在 ProseMirror 處理 `selectionchange` 之前按 Delete，編輯器擋下，內容沒清。上游 #8682 的失敗 run 清單就列了 `inbox-edit.spec.ts:560`。
+- **處理**：`git cherry-pick -x 428f0dcd2`，只改測試（`clearComposer` 等 focus 落定後再逐次 select-all＋Delete），無衝突。2026-11-02 裁決把它 defer 的理由是「桌面端需實機驗收」，但這筆不動產品碼，該理由不適用。
+- **驗證（本機 Windows）**：改到的 8 支 spec 共 171 支測試，169 過；失敗的 `messaging.spec.ts:1775`（貼回的 code block 每行多尾端空白）在帶入前、拿掉 CSS 修補也 3／3 失敗，是本機既有差異；`remote-owned-mentions.spec.ts:376` 在等 `channel-general` 時逾時一次，單獨重跑 3／3 過。
+- **沒帶**：同批的 `1eb67bb52`（#8680，產品競態，含 `video-attachment.spec.ts:1469`）有衝突，列在 ROADMAP。
