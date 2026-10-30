@@ -4,12 +4,12 @@
 > 現況段是 2026-10-30 依 `main` `3bfb2b541844` 與固定上游快照重查的結果；遠端 fork 與舊告警數本次未重查。
 
 ## 現況
-Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作區，fork 維持上游產品行為（[README](README.md)、[FORK](FORK.md)）。2026-10-30 已逐筆裁決至上游 main `6d719c680a85c98153324809988be37425fba73e`：累計 32 個 commit（6 skip、26 defer）、54 筆 PR（12 skip、42 defer）與 2 筆 issue（均 defer），沒有採用產品變更。水位為該完整 commit／PR #8699／issue #8684；最新清單沒有新增 issue，故 issue 編號不變。維護工具 gate 為 29 passed；產品同步與原生驗收尚未完成。2026-10-29 的 Dependabot 103 筆、Code scanning 161 筆未重查，不視為目前告警數；#8624 已關閉未合併，等待替代修補（[本輪裁決](docs/fork/UPSTREAM_REVIEW_2026-10-30.md)、[增量證據](docs/fork/UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)、[既有裁決](docs/fork/DECISIONS.md)）。
+Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作區，fork 維持上游產品行為（[README](README.md)、[FORK](FORK.md)）。2026-10-30 已逐筆裁決至上游 main `6d719c680a85c98153324809988be37425fba73e`：累計 32 個 commit（6 skip、26 defer）、54 筆 PR（12 skip、42 defer）與 2 筆 issue（均 defer），沒有採用產品變更。水位為該完整 commit／PR #8699／issue #8684；最新清單沒有新增 issue，故 issue 編號不變。Tauri 鎖檔 advisory 盤點已重跑（0 漏洞，unmaintained 均為既有項目，不擴大 ignore，見 [既有裁決](docs/fork/DECISIONS.md)）。維護工具 gate 為 29 passed；產品同步與原生驗收尚未完成。2026-10-29 的 Dependabot 103 筆、Code scanning 161 筆未重查，不視為目前告警數；#8624 已關閉未合併，等待替代修補（[本輪裁決](docs/fork/UPSTREAM_REVIEW_2026-10-30.md)、[增量證據](docs/fork/UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)、[既有裁決](docs/fork/DECISIONS.md)）。
 
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 同步前重跑 Tauri 鎖檔 advisory 盤點 | 根 workspace 的 cargo-deny 不涵蓋桌面鎖檔 | 執行 `cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories`，區分 vulnerability 與 unmaintained；對照既有 ignore，新增漏洞必須有修補或裁決，不擴大既有 ignore | Codex | docs/fork/DECISIONS.md:105-109 |
+| （目前無） | - | - | - | - |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |

@@ -291,3 +291,21 @@ Dependabot alerts 與自動安全更新已於推送時開啟。branch protection
 保留前輪完整裁決，另審 `39b8b2b6a6d065b3da981e096b1a3881f1c63fd4..6d719c680a85c98153324809988be37425fba73e` 的 15 個 commit（全部 defer），以及 PR #8689–#8699（2 skip、9 defer）。逐筆裁決及不可變 head 見 [正式裁決末節](UPSTREAM_REVIEW_2026-10-30.md#接續增量審至目前上游最新) 與 [增量機器證據](UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)。#8689 closed 未合併不採用；#8692 的 548 字元說明行依既有長行規則拒收，其 relay→ACP 部署順序仍需後續整合驗證。#8699 除 duration 外新增 approval decide HTTP endpoint、改授權及 Node 工具鏈，不能按標題當小修採用。
 
 state=all 清單核對至最新 #8699，沒有 #8684 以上的新 issue；保留 #8674、#8684 的 defer。三軸最新已審查水位為完整 commit `6d719c680a85c98153324809988be37425fba73e`、PR #8699、issue #8684（最後一軸最新編號未變）。這只代表審查完成，不代表產品同步或安全告警解除；同步延後變更仍在 ROADMAP.md，不再把後續增量審查綁在平台／資料庫條件下。
+
+## 2026-10-30 Tauri 鎖檔 advisory 盤點
+
+依路線圖驗收標準執行 `cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories`，重盤桌面鎖檔安全狀態：
+
+- **指令結果：exit 1（advisories FAILED）。** 失敗全數來自下列 8 筆 unmaintained（cargo-deny 預設把 unmaintained 視為 error）；yanked 與 unmatched ignore 只是 warning。桌面鎖檔不在 CI 掃描範圍（`_ci-security.yml` 只跑根 workspace），因此這個紅燈不影響任何 CI 檢查。
+- **Vulnerability / Unsound：0 筆。** 過去修補的 `tokio 1.54.1`（RUSTSEC-2026-0386）、`lru 0.18.2`（RUSTSEC-2026-0253）、`h2 0.4.16`（RUSTSEC-2026-0258）、`rtrb 0.3.5`（RUSTSEC-2026-0274）均維持修補後版本，無新增漏洞。
+- **Unmaintained：8 筆**（全部為既有觀察項，無安全漏洞）：
+  - `mach 0.1.2`、`mach 0.3.2`（RUSTSEC-2020-0168，經 `user-idle` 引入）
+  - `proc-macro-error 1.0.4`（RUSTSEC-2024-0370，經 `glib-macros` / `glib` / `gtk` / `tauri` 等引入）
+  - `unic-char-property 0.9.0`（RUSTSEC-2025-0081）
+  - `unic-char-range 0.9.0`（RUSTSEC-2025-0075）
+  - `unic-common 0.9.0`（RUSTSEC-2025-0080）
+  - `unic-ucd-ident 0.9.0`（RUSTSEC-2025-0100）
+  - `unic-ucd-version 0.9.0`（RUSTSEC-2025-0098，以上 unic 家族均經 `urlpattern` / `tauri-utils` 引入）
+- **Yanked crates（警告）：** `chacha20 0.10.1`、`clipboard-win 5.4.1`。
+- **Unmatched ignores（警告）：** 根目錄 `deny.toml` 中的 `RUSTSEC-2026-0253` 與 `RUSTSEC-2026-0381` 在桌面鎖檔無匹配項目。
+- **裁決：** 無新增漏洞，無需修改 `desktop/src-tauri/Cargo.lock`；不擴大 `deny.toml` 的既有 ignore，維持既有政策。
