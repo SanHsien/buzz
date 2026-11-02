@@ -309,3 +309,17 @@ state=all 清單核對至最新 #8699，沒有 #8684 以上的新 issue；保留
 - **Yanked crates（警告）：** `chacha20 0.10.1`、`clipboard-win 5.4.1`。
 - **Unmatched ignores（警告）：** 根目錄 `deny.toml` 中的 `RUSTSEC-2026-0253` 與 `RUSTSEC-2026-0381` 在桌面鎖檔無匹配項目。
 - **裁決：** 無新增漏洞，無需修改 `desktop/src-tauri/Cargo.lock`；不擴大 `deny.toml` 的既有 ignore，維持既有政策。
+
+
+## 2026-11-02 上游積壓逐筆裁決（commit `6d719c6 → d342cf1`；PR 8699 → 8920；issue 8684 → 8919）
+
+換上游檢查器正本後 `--strict` 回 exit 1，審 84 個 commit、195 筆 PR、15 筆 issue。全部取不可變證據：commit 用 `gh api repos/block/buzz/commits/<SHA>` 的 diff；PR 取 `pulls/<n>` 的 base／head SHA 與目前 head 的 diff；issue 用 state=all 清單。逐筆裁決、diff SHA-256、檔案清單與掃描命中在 [正式裁決](UPSTREAM_REVIEW_2026-11-02.md) 與 [機器證據](UPSTREAM_REVIEW_2026-11-02.json)。
+
+結果：commit 0 adopt／8 skip／76 defer；PR 0 adopt／55 skip／140 defer；issue 0 adopt／5 skip／10 defer。沒有 adopt，理由同 10-30：產品行為不自行分岔，而這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有原生與 Postgres 驗收環境。
+
+- **skip（拒收）8 個 commit、PR 中 29 筆**：新增行超過 400 字元、零寬／雙向控制字元或行內長空白，依 UPSTREAM.md 字面拒收。控制字元命中全在測試向量與驗證碼，看起來是刻意的同形字測試資料，但不自行豁免，同步時整批重審。
+- **skip（上游未收）**：closed 未合併的 PR，抽查標題與檔案沒有 Windows／CJK 專屬缺陷。#8918 的 diff 端點回空，因未被收下而 skip。
+- **issue #8856（Windows Desktop 連自架 relay 顯示「Can't reach the relay」）**：defer，已加 ROADMAP 中期列。上游沒有根因或修正，回報者已查到 `BUZZ_CORS_ORIGINS` 相關但仍間歇斷線；fork 沒有 Windows 桌面實機驗收環境。重審條件：上游釘出根因或修正 commit，或維護者在 Windows 桌面重現。
+- **issue #8794、#8889、#8845、#8919、#8761 skip**：分別是上游託管登入服務、push gateway、功能提案與無內容，fork 沒有對應服務。
+
+OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水位：commit `d342cf141cb3211c8e5a6c74f881cf1d39ad3b12`、PR 8920、issue 8919。這只代表審查完成，不代表產品同步或告警解除。
