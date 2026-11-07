@@ -640,14 +640,19 @@ export function useRichTextEditor({
     return editor.isEmpty;
   }, [editor]);
 
+  // The helpers below can run against an editor whose `useEditor` owner has
+  // already unmounted (draft-restore and send-flow effects hold the last
+  // `editor`). @tiptap/core >= 3.23 nulls the command manager in `destroy()`,
+  // so `editor.commands` throws there; `editor.chain()` returns an inert chain
+  // instead. Same commands, no throw after destroy.
   const clearContent = React.useCallback(() => {
-    editor?.commands.clearContent(true);
+    editor?.chain().clearContent(true).run();
   }, [editor]);
 
   const setContent = React.useCallback(
     (markdown: string) => {
       if (!editor) return;
-      editor.commands.setContent(markdown);
+      editor.chain().setContent(markdown).run();
     },
     [editor],
   );
@@ -677,7 +682,7 @@ export function useRichTextEditor({
   );
 
   const focusEnd = React.useCallback(() => {
-    editor?.commands.focus("end");
+    editor?.chain().focus("end").run();
   }, [editor]);
 
   /**
@@ -689,7 +694,7 @@ export function useRichTextEditor({
   const focusPreserve = React.useCallback(() => {
     if (!editor) return;
     // `focus()` with no position argument preserves the current selection.
-    editor.commands.focus();
+    editor.chain().focus().run();
   }, [editor]);
 
   // Backwards-compatible alias — existing call sites that want "end"

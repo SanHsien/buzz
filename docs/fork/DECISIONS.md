@@ -393,3 +393,21 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
   - `actions/untrusted-checkout/medium` 5（`release.yml`）：觸發條件是 `desktop-v*` tag push，不是 PR；每個 job 都以 `github.repository == 'block/buzz'` 為前提（或 `needs: setup` 連帶跳過），在 fork 上不會跑。
   - `actions/untrusted-checkout/high` 與 `...-toctou/high` 各 1（`codex-security-review.yml`）：確實是 `pull_request_target`，但所有 job 以 `github.repository == 'block/buzz'` 為前提，在 fork 上整支 workflow 不會執行；checkout 是唯讀、`persist-credentials: false`、有 head SHA 比對，並且只在隔離的唯讀 job 內檢視。結論：在這個 fork 上沒有 PR 程式碼帶 secrets 執行的路徑。
   - `js/redos` 1（`desktop/src/features/huddle/lib/ttsLiveMessages.ts:50`）：**真問題，告警維持 open（#22，2026-11-08 由維運長重新開啟）**：上游 `block/buzz` main 同一行仍未修，可在 TTS 讀出帶媒體連結的 agent 訊息時觸發；依維護者「能修就修、真問題不關」的原則，不以 won't fix 關閉。觸發：上游修正後跟進，或維護者決定在 fork 先修。正規式 `(^|\n)\s*\|\|\s*\n(?:\s*\n)*\s*\|\|\s*(?=\n|$)` 的 `\s*\n` 與 `(?:\s*\n)*` 因 `\s` 含 `\n` 而歧義，實測 `"||" + "\n"×n + "x"` 耗時 n=20 為 10 ms、n=24 為 173 ms、n=26 為 728 ms，呈指數成長。觸及條件：agent 訊息帶媒體 URL tag 且進入即時 TTS 才會走到這行。重審：同步上游時看該行是否改寫；或上游收到回報後修正。
+
+## 2026-11-08（再續）tiptap 3.30.5 刷新讓 main 的 Desktop Smoke E2E 變紅：根因與修法
+
+`6bb49dbd0` 把 `@tiptap/*` 刷到 3.30.5（關 Dependabot #112、#114；`prosemirror-view` 1.42.9 關 #116）之後，run 42405563759 的 Desktop Smoke E2E (5)、(10) 紅，重跑仍紅（`6bfb6f6b9` 是綠的）。本機用 Playwright 1.60 重現（`virtualization.spec.ts:102` 同樣紅），頁面落到 error boundary，console 為 `TypeError: Cannot read properties of null (reading 'commands')`。
+
+**根因（兩件事，只有第一件造成紅燈）：**
+
+- `@tiptap/core` 從 3.23.1 起（3.22.5 沒有、3.23.1 有，用 npm tarball 逐版核對）在 `Editor.destroy()` 把 `commandManager` 設成 `null`，之後 `editor.commands` 會直接丟錯（`editor.chain()`／`can()` 則回傳惰性物件）。`desktop/src/features/messages/lib/useRichTextEditor.ts` 的 `clearContent`／`setContent`／`focusEnd`／`focusPreserve` 以 `editor.commands.*` 呼叫；草稿還原與送出流程（`useDraftPersistSnapshot` 的 effect 等）會對已經被 `useEditor` 卸掉的 editor 呼叫它們。3.22.5 銷毀後這些呼叫是安靜的 no-op，3.30.5 變成未捕捉的 render 例外，整棵樹被 error boundary 取代，所以 composer 所在的頁面（Pulse、workflow、inbox、mention、invites）全部連帶紅。這是上游產品碼與新版 tiptap 的相容性缺口，上游一旦升 tiptap 也會撞上（本機 `upstream/main` `f3b127e3a` 的鎖仍是 3.22.5）。
+- 另一個獨立瑕疵：`@tiptap/react` 把 `extension-bubble-menu`／`extension-floating-menu` 宣告為 `^3.30.5` 的 optionalDependencies，鎖檔刷新時浮到 3.33.0，但它們的 peer 是**精確版**（3.33.0 要 `@tiptap/core` 3.33.0），與鎖裡的 core／pm 3.30.5 不一致。這組不一致本身不是這次紅燈的原因（把它們對齊到 3.30.5 後紅燈依舊），但是不一致的版本組合，所以一併修掉。
+
+**修法（鎖檔對齊＋最小的產品碼防護，三個安全告警維持關閉）：**
+
+1. `pnpm-lock.yaml`：`extension-bubble-menu`、`extension-floating-menu` 3.33.0 → 3.30.5，整組 `@tiptap/*` 回到同一版。不加 `overrides`（`pnpm-workspace.yaml` 由上游持有），只動鎖檔；`pnpm install --frozen-lockfile` 通過，`pnpm install --no-frozen-lockfile` 不會再把它們浮上去（已鎖定版本滿足範圍）。新增 `desktop/scripts/tiptap-lock-alignment.test.mjs`：鎖檔裡所有 `@tiptap/*` 必須同一版，混版時紅（用上一版鎖檔驗證會紅）。
+2. `useRichTextEditor.ts` 的 `clearContent`／`setContent`／`focusEnd`／`focusPreserve` 改用 `editor.chain().<cmd>().run()`：指令相同，editor 已銷毀時是惰性 no-op，不丟錯。**這是 fork 對上游產品碼的修補**（`FORK.md` 已列入）；同步上游時衝突以上游為準，上游若自己補了防護就丟掉這份。回貢與否屬維護者決定，沒有對上游開任何東西。
+
+**考慮過、沒採用：** 退回 tiptap 3.22.5。可以不動產品碼，但 `@tiptap/core` < 3.30.4／3.30.5 會讓 #112（`mergeAttributes()` 的 `__proto__`）與 #114（Markdown 屬性解析的二次方 ReDoS）重新開啟；沒有任何 ≥ 3.30.5 的版本保留舊行為（3.23.1 之後全部相同），所以「升到另一組一致版本（例如整組 3.33.0）」也不能解。若維護者寧可不碰產品碼，退路是鎖回 3.22.5 並把 #112、#114 以 tolerable_risk 關閉：#114 的程式碼路徑在 `@tiptap/core` 的 `MarkdownManager`，本 repo 用的是第三方 `tiptap-markdown`，不載入它；#112 需要攻擊者控制的 attrs 物件帶 own `__proto__` key，本 repo 沒有找到這樣的入口（未做完整的可達性審計）。
+
+**驗證（本機 Windows、Playwright 1.60；CI 是 ubuntu-24.04，沒有在本機跑 Linux）：** 退回 `6bfb6f6b9` 的鎖＋原產品碼時 `virtualization.spec.ts:102` 綠；`6bb49dbd0` 的鎖時紅；只對齊 bubble／floating-menu 仍紅；加上 `chain()` 防護後 CI 列出的 7 條都綠（`virtualization:102`、`:201`、`workflows:297`、`mention-recipients:122`、`inbox-edit:560`、`invites-settings-screenshots:39` 綠；`workflow-local-controls:151` 的行為斷言全過，只剩視覺快照因為 repo 只提交 linux 快照、本機缺 `-win32.png` 而報「snapshot doesn't exist」，與修補無關，產生的檔案沒有提交）。`pnpm typecheck` 過；`pnpm test` 第一階段 6835／6835（含新測試），第二階段 jsdom 仍是本機 Node 26 的既有 7 筆失敗（`relayRemoved`、`legacyCommunityReadmit`，兩檔都只涉及 relay 重新收錄，與編輯器無關）。`virtualization.spec.ts:247` 在本機同樣紅（捲動位移 120 < 200），退回 `6bfb6f6b9` 的鎖＋原碼也一樣紅，是本機 Windows 滾輪行為，不是這次造成，CI 上它是綠的。
