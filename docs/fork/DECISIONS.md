@@ -361,10 +361,10 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 
 維護者指示「告警沒必要開著的就關」。原則：告警要嘛驅動一個動作，要嘛關掉並寫下理由與重審觸發條件；修得了的先修，不拿關閉當捷徑。manifest 宣告與上游持有的 workflow／產品碼不動（`FORK.md`），所以「修」只限相容的鎖檔刷新。關閉告警的註解上限 280 字元，詳細理由在這裡。
 
-**修（鎖檔刷新，未推送；推上 `main` 後 Dependabot 自動結案）：**
+**修（鎖檔刷新；推上 `main` 後 Dependabot 自動結案）：**
 
 - `benchmarks/harbor-buzz-orchestra/uv.lock` 與 `testbed/uv.lock`：上游 `block/buzz` main 沒有升這兩份鎖（取得 `upstream/main` 後比對版本相同），所以自己 `uv lock --upgrade-package` 刷新 PyJWT、aiohttp、anyio、certifi、cryptography、datasets、filelock、fsspec、h2、litellm、multidict、urllib3，只動鎖檔、不動 `pyproject.toml`。逐筆用 `vulnerable_version_range` 對新版本核對：所有 pip 告警（85 筆含 PyJWT 兩筆「無修補版本」，其範圍 ≤ 2.13.0）新版本都落在範圍外。`filelock` 要求 `>=4.2.1`，但 litellm 1.108.2 限制 `filelock<4`，所以讓 litellm 降到 1.103.10（仍高於告警的修補版 1.95.0）。上游的主鎖指向 Block 內部 registry（`global.block-artifacts.com`），外部無法解析；`uv lock` 會把整份鎖改成 `pypi.org`，所以主鎖 diff 很大但實質只是版本與 registry 位址。同步上游時這兩份鎖的衝突一律取上游再重做。驗證：`pytest` 90 過、1 失敗（`test_composed_system_prompt_carries_persona_and_team_roster` 斷言 POSIX 檔案權限 0o600，在 NTFS 上本來就不成立，與鎖檔無關）。
-- `pnpm-lock.yaml`：`@tiptap/*` 3.22.5 → 3.30.5、`prosemirror-view` 1.41.8 → 1.42.9、`linkifyjs` 4.3.2 → 4.4.0（連帶 prosemirror-model／transform 等）。**不能只升 tiptap**：`extension-link` 會帶進第二份 `linkifyjs` 4.4.0，而 `desktop/package.json` 直接依賴的是 4.3.2，兩份實例各自持有 linkify 的協定登錄，`composerLinkPastePipeline.test.mjs` 的 5 個測試全紅（「Link's onCreate to register the buzz protocol」）。把 `linkifyjs` 一起刷新到 4.4.0 讓整棵樹只剩一份後 5/5 轉綠。作法：`pnpm update` 後還原 `desktop/package.json`，再 `pnpm install --no-frozen-lockfile`；manifest 宣告不動。驗證：`pnpm install --frozen-lockfile`、`pnpm typecheck` 通過、`pnpm test` 第一階段 6834／6834 過。第二階段 jsdom 有 7 筆失敗（`useManagedAgentActions.relayRemoved.jsdom-test.mjs`），還原成舊鎖後同一檔同樣失敗，所以是本機 Node 26 的既有問題（見 2026-11-07 條目 Node 25+ 內建 `localStorage`），不是這次刷新造成。
+- `pnpm-lock.yaml`：`@tiptap/*` 3.22.5 → 3.30.5、`prosemirror-view` 1.41.8 → 1.42.9、`linkifyjs` 4.3.2 → 4.4.0（連帶 prosemirror-model／transform 等，另有遞移依賴 `@babel/runtime` 7.29.13、`fast-equals` 5.4.5、`use-sync-external-store` 1.7.0）。**不能只升 tiptap**：`extension-link` 會帶進第二份 `linkifyjs` 4.4.0，而 `desktop/package.json` 直接依賴的是 4.3.2，兩份實例各自持有 linkify 的協定登錄，`composerLinkPastePipeline.test.mjs` 的 5 個測試全紅（「Link's onCreate to register the buzz protocol」）。把 `linkifyjs` 一起刷新到 4.4.0 讓整棵樹只剩一份後 5/5 轉綠。作法：`pnpm update` 後還原 `desktop/package.json`，再 `pnpm install --no-frozen-lockfile`；manifest 宣告不動。驗證：`pnpm install --frozen-lockfile`、`pnpm typecheck` 通過、`pnpm test` 第一階段 6834／6834 過。第二階段 jsdom 有 7 筆失敗（`useManagedAgentActions.relayRemoved.jsdom-test.mjs`），還原成舊鎖後同一檔同樣失敗，所以是本機 Node 26 的既有問題（見 2026-11-07 條目 Node 25+ 內建 `localStorage`），不是這次刷新造成。
 
 **關（Dependabot，tolerable_risk）：**
 
@@ -380,15 +380,15 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - `command-line-injection`（`crates/buzz-relay/src/api/git/transport.rs:1030`）：`service` 來自查詢參數，但在 `:918-920` 先對 `git-upload-pack`／`git-receive-pack` 做精確白名單；子命令只由 `strip_prefix("git-")` 得出；`Command::new("git")` 以分開的引數呼叫（不經 shell）；`repo.path()` 是伺服器建立的暫存目錄；`harden_git_env` 清空環境。判斷為誤報。
 - 流程備註：一開始 `comm` 因排序方式不同把 4 筆誤報當成 `used in tests` 一起關掉，發現後重新開啟並以正確理由重關（`pairing/crypto.rs:55`、`session.rs:125`、`grant.rs:61`、`token.rs:73`）；最終分佈已用 API 讀回核對。
 
-**沒處理：** 非 Rust 的 code scanning（JS 測試檔的 regex／sanitization、`actions/*` workflow 權限與 checkout、`py/clear-text-storage`，共 53 筆）不在這輪範圍；`actions/*` 與 workflow 屬上游持有檔，其餘待另行分類。
+**沒處理：** 非 Rust 的 code scanning（JS 測試檔的 regex／sanitization、`actions/*` workflow 權限與 checkout、`py/clear-text-storage`，派工時估 53 筆，實際查到 49 筆，見下一節）不在這輪範圍；`actions/*` 與 workflow 屬上游持有檔，其餘待另行分類。
 
-## 2026-11-08（續）非 Rust 的 code scanning 告警（49 筆，全部關閉）
+## 2026-11-08（續）非 Rust 的 code scanning 告警（49 筆：關閉 48、#22 維持 open）
 
-同日前一輪處理完 Rust 的 100 筆；這輪處理其餘 49 筆，逐筆讀過程式碼與 workflow 後判定。沒有改任何檔案：這些告警所在的 workflow 與產品碼都由上游持有（`FORK.md`），fork 不修。
+同日前一輪處理完 Rust 的 100 筆；這輪處理其餘 49 筆，逐筆讀過程式碼與 workflow 後判定：關閉 48 筆（used in tests 24、false positive 6、won't fix 18），js/redos #22 是真問題，維持 open。沒有改任何檔案：這些告警所在的 workflow 與產品碼都由上游持有（`FORK.md`），fork 不修。
 
 - **`used in tests` 24**：`*.test.mjs`／`*.jsdom-test.mjs` 內的 regex、URL 子字串與 sanitization 斷言（js/incomplete-multi-character-sanitization 7、js/incomplete-url-substring-sanitization 8、js/regex/missing-regexp-anchor 5、js/incomplete-sanitization 1、js/insecure-temporary-file 1），加上 benchmark 測試台腳本 `benchmark.py` 的 `py/clear-text-storage-sensitive-data` 3 筆（產生一次性本機測試憑證，檔案以 0600 建立）。
 - **`false positive` 6**：`AgentCreationPreview.tsx:743/881`（React `<img src>` 屬性綁定，不是 HTML sink）；`ProjectReadmePanel.tsx:41/50`（README 轉成 Markdown 文字後由 react-markdown／remark 渲染，沒有 rehype-raw，遺留的 `<script` 是惰性文字；`decodeHtmlEntities` 先解 `&amp;` 屬於顯示文字的小瑕疵，不是注入）；`build-protected-feature-artifacts.mjs:63`（建置腳本讀自己剛產出的目錄，沒有攻擊者可控路徑）；`web/.../nostr-client.ts:91`（NIP-42 協定本身：只對已選定的 wsUrl 簽 AUTH 挑戰，惡意 relay 只能拿到對它自己 URL 有效的簽章）。
-- **`won't fix` 19**：
+- **`won't fix` 18**（另有 js/redos 1 筆維持 open，列在本節最後）：
   - `actions/missing-workflow-permissions` 11（`ci.yml` 10、`_ci-clients.yml` 1）：上游原樣的 workflow；`_ci-clients.yml` 只有逐字帶入的 cherry-pick，沒有 fork 自己的設計。fork repo 的預設 `GITHUB_TOKEN` 權限是 `read`（`gh api .../actions/permissions/workflow` 已核對），所以缺少明確 `permissions:` 的實際權限仍是唯讀。
   - `actions/untrusted-checkout/medium` 5（`release.yml`）：觸發條件是 `desktop-v*` tag push，不是 PR；每個 job 都以 `github.repository == 'block/buzz'` 為前提（或 `needs: setup` 連帶跳過），在 fork 上不會跑。
   - `actions/untrusted-checkout/high` 與 `...-toctou/high` 各 1（`codex-security-review.yml`）：確實是 `pull_request_target`，但所有 job 以 `github.repository == 'block/buzz'` 為前提，在 fork 上整支 workflow 不會執行；checkout 是唯讀、`persist-credentials: false`、有 head SHA 比對，並且只在隔離的唯讀 job 內檢視。結論：在這個 fork 上沒有 PR 程式碼帶 secrets 執行的路徑。
