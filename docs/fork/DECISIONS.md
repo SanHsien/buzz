@@ -328,7 +328,7 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 
 遠端 `main` 有兩個 job 紅燈：Mobile (Android) 報 `The Java version used for the build is 25.0.5, which is incompatible with Gradle 8.14.5`（ubuntu-latest 已是 26.04）；Security / Dependency policy 報 RUSTSEC-2026-0433（pulldown-cmark 0.13.5）與 RUSTSEC-2026-0429（zip 8.6.0）。兩者都是上游已修的問題，不是 fork 自己的設計，所以逐字 `cherry-pick -s -x`：
 
-- **#8711 `c609d33e8`：defer 改 adopt。** 2026-11-02 裁決以「與 fork 的 workflow 修補衝突」為由 defer，但 `_ci-clients.yml` 沒有 fork 修補（無 `fork patch` 標記、不在 FORK.md 修補表），cherry-pick 零衝突。setup-java 維持上游釘的 v6.1.0（`b843ebf9b913`，已用 `gh api` 對 tag 核對）；v6.2.0 是 `77dd5b2ce225`，留給 Dependabot 的 github-actions 更新，不在紅燈修補裡順手升版。
+- **#8711 `c609d33e8`：defer 改 adopt。** 2026-11-02 裁決以「與 fork 的 workflow 修補衝突」為由 defer，但 `_ci-clients.yml` 沒有 fork 修補（無 `fork patch` 標記、不在 FORK.md 修補表），cherry-pick 零衝突。setup-java 維持上游釘的 v6.1.0（`b843ebf9b913`，已用 `gh api` 對 tag 核對）；隨後同一批推送再升到 v6.2.0（`77dd5b2ce225`，tag 已核對）：`Dependency freshness` 對 v6.1.0 會報 REVIEW UPDATE，而 Dependabot 沒有開對應 PR，留著只會多一筆落後。
 - **#8922 `c9b8f1176`：新項目，採用。** 在 `d342cf1` 之後，水位不動。pulldown-cmark 只是鎖檔升級（relay 唯一呼叫處用預設 `Parser::new`，本來就不碰 wikilinks）；zip 0429 ignore 沿用 0367／0368／0369 的理由與移除條件（mesh-llm 升 zip 9 後移除）。fork 內重新驗證該理由：`cargo tree -i zip@8.6.0 --locked` 顯示 zip 8.6.0 只經 `buzz-mesh-smoke` 的 dev-dependencies 進入根目錄鎖檔。
 - **驗證：** 本機 `cargo deny check advisories` 通過。遠端 CI 結果在推送前未知，不宣稱已綠。
 - **未處理：** `desktop/src-tauri/Cargo.lock` 另有 zip 8.6.0，CI 的 `cargo-deny check` 只掃根目錄鎖檔；沿用 2026-10-30 Tauri 鎖檔 advisory 盤點的處理方式，下次盤點時一併看。
