@@ -18,12 +18,14 @@
   "reviewed_issue_through": 8919
  },
  "counts": {
-  "c-defer": 76,
+  "c-defer": 75,
   "c-skip": 8,
-  "p-defer": 140,
+  "p-defer": 139,
   "p-skip": 55,
   "i-defer": 10,
-  "i-skip": 5
+  "i-skip": 5,
+  "c-adopt": 1,
+  "p-adopt": 1
  },
  "commits": [
   {
@@ -172,8 +174,8 @@
     ".github/workflows/_ci-clients.yml"
    ],
    "hits": {},
-   "verdict": "defer",
-   "reason": "CI workflow 變更，與 fork 的 workflow 修補（FORK.md）衝突，同步時一併重做；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」"
+   "verdict": "adopt",
+   "reason": "2026-11-07 由 defer 改判 adopt：ubuntu 26.04 的 JDK 25 使 Android lane 紅燈；cherry-pick -x 帶入，_ci-clients.yml 無 fork 修補衝突"
   },
   {
    "sha": "050d545264a88ed897884fa845d158dd59eeaf30",
@@ -2313,8 +2315,8 @@
     ".github/workflows/_ci-clients.yml"
    ],
    "hits": {},
-   "verdict": "defer",
-   "reason": "已合併，內容經 commit 軸抵達；CI workflow 變更，與 fork 的 workflow 修補（FORK.md）衝突，同步時一併重做"
+   "verdict": "adopt",
+   "reason": "2026-11-07 由 defer 改判 adopt：ubuntu 26.04 的 JDK 25 使 Android lane 紅燈；cherry-pick -x 帶入，_ci-clients.yml 無 fork 修補衝突"
   },
   {
    "number": 8712,
@@ -7669,6 +7671,12 @@
    "state": "open",
    "verdict": "skip",
    "reason": "關閉 AI provider 登入流程的功能請求，非缺陷"
+  }
+ ],
+ "amendments": [
+  {
+   "date": "2026-11-07",
+   "note": "#8711 defer->adopt (Android lane red on ubuntu 26.04, JDK 25 vs Gradle 8.14.5); #8922 (c9b8f1176ece, after reviewed range, watermark unchanged) adopted for RUSTSEC-2026-0433/0429; both cherry-picked with -x"
   }
  ]
 }

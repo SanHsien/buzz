@@ -36,6 +36,7 @@
 | `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）一條帶影響評估與移除條件的 ignore（`RUSTSEC-2026-0387` 已由上游 `d676c7b` 的 p256 0.14 取代，ignore 移除） |
 | `Cargo.lock`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml` | 相容的鎖檔升級（tokio、hickory、vite 等），**manifest 宣告不動**；清單見 `docs/fork/DECISIONS.md` |
 | `crates/buzz-push-gateway/Cargo.toml`、`src/app_attest/{authenticator,certificate}.rs`、`src/app_attest_assertion_tests.rs`（含 `Cargo.lock` 的 p256 鏈） | 逐字帶入上游 `d676c7b`（p256 0.13 → 0.14，RUSTSEC-2026-0387）；不是 fork 自己的設計，下次合併上游時內容相同，不會衝突 |
+| `.github/workflows/_ci-clients.yml`、`deny.toml`、`Cargo.lock`（pulldown-cmark 0.13.6） | 逐字帶入上游 `c609d33e8`（#8711，Android lane 釘 JDK 17，ubuntu 26.04 預設 JDK 25）與 `c9b8f1176`（#8922，RUSTSEC-2026-0433／0429）；`cherry-pick -x` 保留出處，下次合併上游時內容相同，不會衝突 |
 | `crates/buzz-dev-mcp/src/{shell,read_file}.rs` | 只動 `#[cfg(test)]`：Windows 平行測試共用一把 env 鎖（`e3561ee`），不影響執行期 |
 
 上游持有的 `README.md`、`AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。

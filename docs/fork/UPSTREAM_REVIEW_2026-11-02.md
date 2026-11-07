@@ -4,11 +4,24 @@
 
 ## 結論
 
-- commit：84 筆，0 adopt、8 skip、76 defer。
-- PR：195 筆，0 adopt、55 skip、140 defer。
+- commit：84 筆，1 adopt、8 skip、75 defer（`c609d33e8c3e` 於 2026-11-07 由 defer 改 adopt，見下方「2026-11-07 修訂」）。
+- PR：195 筆，1 adopt、55 skip、139 defer（#8711 同上）。
 - issue：15 筆，0 adopt、5 skip、10 defer。
 
-沒有 adopt：fork 的政策是產品行為與上游相同、不自行分岔（FORK.md），而這批變更橫跨行動端、桌面端、relay 與資料庫，fork 沒有對應的原生與 Postgres 驗收環境，採用等於未經驗收的產品改動。defer 項目的唯一出路是 ROADMAP「同步延後變更」整批帶入。沒有宣稱產品已同步、CI 已跑或告警已解除。
+原審查時沒有 adopt：fork 的政策是產品行為與上游相同、不自行分岔（FORK.md），而這批變更橫跨行動端、桌面端、relay 與資料庫，fork 沒有對應的原生與 Postgres 驗收環境，採用等於未經驗收的產品改動。defer 項目的唯一出路是 ROADMAP「同步延後變更」整批帶入。沒有宣稱產品已同步、CI 已跑或告警已解除。
+
+## 2026-11-07 修訂：兩項由 CI 紅燈觸發的 adopt
+
+原結論的「fork 不自行分岔產品」針對產品行為；下面兩項只動 CI 與依賴政策，不改產品行為，且 fork 的 `main` 因它們實際紅燈，所以例外採用。皆以 `git cherry-pick -s -x` 逐字帶入，保留上游作者與 `(cherry picked from ...)` 行。
+
+| 上游 | 觸發的紅燈 | 帶入內容 | 驗證與限制 |
+| --- | --- | --- | --- |
+| `c609d33e8c3e` / #8711（原 defer） | Mobile (Android)：`The Java version used for the build is 25.0.5, which is incompatible with Gradle 8.14.5`（ubuntu-latest 已是 26.04） | `.github/workflows/_ci-clients.yml` 在 `matrix.lane == 'android'` 加 `actions/setup-java`（temurin 17，釘 v6.1.0 的完整 SHA `b843ebf9b913`） | 無衝突；YAML 可解析。Android lane 能否變綠只有遠端 CI 能證明，本機未跑 |
+| `c9b8f1176ece` / #8922（審查範圍 `d342cf1` 之後，新項目） | Security / Dependency policy（`cargo-deny check`）：RUSTSEC-2026-0433（pulldown-cmark 0.13.5）、RUSTSEC-2026-0429（zip 8.6.0） | `Cargo.lock` pulldown-cmark → 0.13.6；`deny.toml` 加 0429 ignore，與同路徑的 0367／0368／0369 同理由 | 本機 `cargo deny check advisories` 通過；`cargo tree -i zip@8.6.0 --locked` 確認 zip 8.6.0 在根目錄鎖檔只經 `buzz-mesh-smoke`（dev-dependencies）→ mesh-llm 0.76.2 到達，ignore 理由在 fork 仍成立 |
+
+- 水位不動：#8922 在 `d342cf1`／PR 8920 之後，仍屬下次審查範圍；這裡只記它已因 CI 紅燈提前採用。#8711 在已審範圍內，只是改判。
+- 沒有宣稱 CI 已綠。`desktop/src-tauri/Cargo.lock` 另有 zip 8.6.0，但 CI 的 `cargo-deny check` 只掃根目錄鎖檔，本次未處理；歸「隨上游遷移 rmcp、glib 與 lru 依賴鏈」那類盤點。
+- 之前 defer 理由寫「與 fork 的 workflow 修補衝突」對 #8711 不成立：`_ci-clients.yml` 沒有 `fork patch` 標記也不在 FORK.md 修補表。其他 CI workflow commit 仍須逐一確認，不因此類推。
 
 ## 方法與掃描界限
 
@@ -30,7 +43,7 @@ PR #8918（closed 未合併）的 diff 端點回空，內容無法取得，因�
 | `76cd4294f65b` | fix(relay): close a REQ whose history read failed instead of sending EOSE (#8692) | **skip**：本輪拒收：新增行超過 400 字元（ARCHITECTURE.md），命中 UPSTREAM.md 的拒收規則；不自行豁免。重審條件：上游改寫該行或維護者明確決定 |
 | `f539ef4a8706` | docs(buzz-acp): fix stale prepare_reconnect doc comment (#8697) | **defer**：relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `1fe120165f30` | BUZZ-272: Deny workflow runs for banned owners (#8242) | **defer**：relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
-| `c609d33e8c3e` | ci: pin JDK 17 for the Android lane (#8711) | **defer**：CI workflow 變更，與 fork 的 workflow 修補（FORK.md）衝突，同步時一併重做；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
+| `c609d33e8c3e` | ci: pin JDK 17 for the Android lane (#8711) | **adopt**（2026-11-07 由 defer 改判）：ubuntu-latest 升到 26.04 後 Android lane 因 JDK 25 與 Gradle 8.14.5 不相容而紅燈；`cherry-pick -x` 帶入，`_ci-clients.yml` 無衝突（該檔沒有 fork 修補），setup-java 維持上游釘的 v6.1.0 SHA |
 | `050d545264a8` | perf(mobile): skip unchanged message footer layout (#8433) | **defer**：行動端變更，需 iOS／Android 原生驗收環境；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `1f16f621d87c` | perf(relay): cut connect-burst CPU in log filtering and open-channel lookup (#8670) | **skip**：本輪拒收：新增行超過 400 字元（Justfile），命中 UPSTREAM.md 的拒收規則；不自行豁免。重審條件：上游改寫該行或維護者明確決定 |
 | `4b21a10c4b10` | fix: don't notify workflow owners through their attribution tag (#8694) | **defer**：行動端變更，需 iOS／Android 原生驗收環境；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
@@ -121,7 +134,7 @@ PR #8918（closed 未合併）的 diff 端點回空，內容無法取得，因�
 | #8707 | OPEN | `4d1a143cd771` | fix(push): restore grants after APNs endpoint rotation | **defer**：OPEN，head 釘在 4d1a143cd771，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境 |
 | #8708 | OPEN | `6faad526554a` | fix(push): rotate APNs storage keys safely | **defer**：OPEN，head 釘在 6faad526554a，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #8709 | OPEN | `d7d3c5e0b64f` | feat(workflows): approval gates persist and resume, with duration validation (   WF-08) | **defer**：OPEN，head 釘在 d7d3c5e0b64f，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入 |
-| #8711 | MERGED | `8c438f56132e` | ci: pin JDK 17 for the Android lane | **defer**：已合併，內容經 commit 軸抵達；CI workflow 變更，與 fork 的 workflow 修補（FORK.md）衝突，同步時一併重做 |
+| #8711 | MERGED | `8c438f56132e` | ci: pin JDK 17 for the Android lane | **adopt**（2026-11-07 由 defer 改判）：同 commit 軸 `c609d33e8c3e`，fork 的 Android lane 因 ubuntu 26.04 的 JDK 25 紅燈 |
 | #8712 | MERGED | `bfb2aa5e39b9` | fix(mobile): finish public account setup before returning to Buzz | **skip**：本輪拒收：新增行超過 400 字元（ARCHITECTURE.md, Justfile），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
 | #8713 | OPEN | `397acae706ac` | feat(desktop): models dashboard on the Agents page — usage by model + landscape | **defer**：OPEN，head 釘在 397acae706ac，合併後走 commit 軸；桌面端（Tauri／Windows）變更，需實機驗收 |
 | #8714 | OPEN | `3232d47f7927` | feat(relay): push per-community storage usage to kgoose | **defer**：OPEN，head 釘在 3232d47f7927，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
