@@ -381,3 +381,15 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - 流程備註：一開始 `comm` 因排序方式不同把 4 筆誤報當成 `used in tests` 一起關掉，發現後重新開啟並以正確理由重關（`pairing/crypto.rs:55`、`session.rs:125`、`grant.rs:61`、`token.rs:73`）；最終分佈已用 API 讀回核對。
 
 **沒處理：** 非 Rust 的 code scanning（JS 測試檔的 regex／sanitization、`actions/*` workflow 權限與 checkout、`py/clear-text-storage`，共 53 筆）不在這輪範圍；`actions/*` 與 workflow 屬上游持有檔，其餘待另行分類。
+
+## 2026-11-08（續）非 Rust 的 code scanning 告警（49 筆，全部關閉）
+
+同日前一輪處理完 Rust 的 100 筆；這輪處理其餘 49 筆，逐筆讀過程式碼與 workflow 後判定。沒有改任何檔案：這些告警所在的 workflow 與產品碼都由上游持有（`FORK.md`），fork 不修。
+
+- **`used in tests` 24**：`*.test.mjs`／`*.jsdom-test.mjs` 內的 regex、URL 子字串與 sanitization 斷言（js/incomplete-multi-character-sanitization 7、js/incomplete-url-substring-sanitization 8、js/regex/missing-regexp-anchor 5、js/incomplete-sanitization 1、js/insecure-temporary-file 1），加上 benchmark 測試台腳本 `benchmark.py` 的 `py/clear-text-storage-sensitive-data` 3 筆（產生一次性本機測試憑證，檔案以 0600 建立）。
+- **`false positive` 6**：`AgentCreationPreview.tsx:743/881`（React `<img src>` 屬性綁定，不是 HTML sink）；`ProjectReadmePanel.tsx:41/50`（README 轉成 Markdown 文字後由 react-markdown／remark 渲染，沒有 rehype-raw，遺留的 `<script` 是惰性文字；`decodeHtmlEntities` 先解 `&amp;` 屬於顯示文字的小瑕疵，不是注入）；`build-protected-feature-artifacts.mjs:63`（建置腳本讀自己剛產出的目錄，沒有攻擊者可控路徑）；`web/.../nostr-client.ts:91`（NIP-42 協定本身：只對已選定的 wsUrl 簽 AUTH 挑戰，惡意 relay 只能拿到對它自己 URL 有效的簽章）。
+- **`won't fix` 19**：
+  - `actions/missing-workflow-permissions` 11（`ci.yml` 10、`_ci-clients.yml` 1）：上游原樣的 workflow；`_ci-clients.yml` 只有逐字帶入的 cherry-pick，沒有 fork 自己的設計。fork repo 的預設 `GITHUB_TOKEN` 權限是 `read`（`gh api .../actions/permissions/workflow` 已核對），所以缺少明確 `permissions:` 的實際權限仍是唯讀。
+  - `actions/untrusted-checkout/medium` 5（`release.yml`）：觸發條件是 `desktop-v*` tag push，不是 PR；每個 job 都以 `github.repository == 'block/buzz'` 為前提（或 `needs: setup` 連帶跳過），在 fork 上不會跑。
+  - `actions/untrusted-checkout/high` 與 `...-toctou/high` 各 1（`codex-security-review.yml`）：確實是 `pull_request_target`，但所有 job 以 `github.repository == 'block/buzz'` 為前提，在 fork 上整支 workflow 不會執行；checkout 是唯讀、`persist-credentials: false`、有 head SHA 比對，並且只在隔離的唯讀 job 內檢視。結論：在這個 fork 上沒有 PR 程式碼帶 secrets 執行的路徑。
+  - `js/redos` 1（`desktop/src/features/huddle/lib/ttsLiveMessages.ts:50`）：**看起來是真問題**，關閉理由是「上游持有的產品碼，fork 跟隨上游」。正規式 `(^|\n)\s*\|\|\s*\n(?:\s*\n)*\s*\|\|\s*(?=\n|$)` 的 `\s*\n` 與 `(?:\s*\n)*` 因 `\s` 含 `\n` 而歧義，實測 `"||" + "\n"×n + "x"` 耗時 n=20 為 10 ms、n=24 為 173 ms、n=26 為 728 ms，呈指數成長。觸及條件：agent 訊息帶媒體 URL tag 且進入即時 TTS 才會走到這行。重審：同步上游時看該行是否改寫；或上游收到回報後修正。
