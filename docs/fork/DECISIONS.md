@@ -332,3 +332,11 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **#8922 `c9b8f1176`：新項目，採用。** 在 `d342cf1` 之後，水位不動。pulldown-cmark 只是鎖檔升級（relay 唯一呼叫處用預設 `Parser::new`，本來就不碰 wikilinks）；zip 0429 ignore 沿用 0367／0368／0369 的理由與移除條件（mesh-llm 升 zip 9 後移除）。fork 內重新驗證該理由：`cargo tree -i zip@8.6.0 --locked` 顯示 zip 8.6.0 只經 `buzz-mesh-smoke` 的 dev-dependencies 進入根目錄鎖檔。
 - **驗證：** 本機 `cargo deny check advisories` 通過。遠端 CI 結果在推送前未知，不宣稱已綠。
 - **未處理：** `desktop/src-tauri/Cargo.lock` 另有 zip 8.6.0，CI 的 `cargo-deny check` 只掃根目錄鎖檔；沿用 2026-10-30 Tauri 鎖檔 advisory 盤點的處理方式，下次盤點時一併看。
+
+## 2026-11-07：要裝 Playwright 的兩個 desktop E2E job 釘 `ubuntu-24.04`
+
+- 現象：`44fccec71` 改了 workflow，觸發 Desktop Smoke E2E（10 個 shard）與 Desktop E2E Integration（3 個 shard）。全部在 `Install Playwright Chromium` 失敗：`ERROR: Playwright does not support chromium on ubuntu26.04-x64`，runner image 是 `ubuntu26/20261101.186`。
+- 上游同樣跑在 ubuntu-26.04、同樣鎖 Playwright 1.60.0，卻是綠的（run 42342795419）。原因是 `Restore Playwright browser cache` 命中，跳過了安裝步驟。fork 沒有這份快取，所以一定會失敗；上游的快取被清掉後也會失敗。
+- 裁決：只把這兩個 job 的 `runs-on` 改成 `ubuntu-24.04`，加上 `fork patch (SanHsien/buzz)` 標記並登記到 FORK.md。不在 fork 自行升級 `@playwright/test`：本 fork 產品依賴跟隨上游，Playwright 1.65.0 雖已支援 ubuntu26.04，仍等上游升級。
+- 移除條件：上游鎖到支援 ubuntu26.04 的 Playwright 後，同步時改回 `ubuntu-latest` 並刪掉這條修補。
+
