@@ -356,3 +356,28 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 **試升時順便得到的資訊（供日後上游升級時參考，不是本 fork 的變更）：** jsdom 30 起 engines 為 `^24.15.0`（hermit 是 24.15.0，Windows build job 釘 24.14.1）；`pnpm update` 升 jsdom 31 時 `parse5-parser-stream@8.1.0` 會沿用舊鎖的 `parse5@8.0.1` 而缺 `flushCharacters`，需 `pnpm dedupe`；motion 14.10.1 發佈不足一天會讓 pnpm 往 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude`；Node 25+ 的內建 `localStorage` 會讓 `test-jsdom-setup.mjs` 的 jsdom 測試失敗（Node 24 正常）；kube 5 的 `Time` 由 chrono 改 jiff、`Error::Api` 改 `Box<Status>`；rmcp 3 的 `Content`／`RawContent` 合併為 `#[non_exhaustive]` 的 `ContentBlock`。
 
 **`deny.toml` 的 `RUSTSEC-2026-0381` ignore** 目前沒有匹配任何 crate（cargo-deny 警告 unmatched）。沒有移除：它是上游自己的 ignore，移除與否屬上游；下次同步上游時再看。
+
+## 2026-11-08 安全告警處理：能修的修、沒有動作可做的關
+
+維護者指示「告警沒必要開著的就關」。原則：告警要嘛驅動一個動作，要嘛關掉並寫下理由與重審觸發條件；修得了的先修，不拿關閉當捷徑。manifest 宣告與上游持有的 workflow／產品碼不動（`FORK.md`），所以「修」只限相容的鎖檔刷新。關閉告警的註解上限 280 字元，詳細理由在這裡。
+
+**修（鎖檔刷新，未推送；推上 `main` 後 Dependabot 自動結案）：**
+
+- `benchmarks/harbor-buzz-orchestra/uv.lock` 與 `testbed/uv.lock`：上游 `block/buzz` main 沒有升這兩份鎖（取得 `upstream/main` 後比對版本相同），所以自己 `uv lock --upgrade-package` 刷新 PyJWT、aiohttp、anyio、certifi、cryptography、datasets、filelock、fsspec、h2、litellm、multidict、urllib3，只動鎖檔、不動 `pyproject.toml`。逐筆用 `vulnerable_version_range` 對新版本核對：所有 pip 告警（85 筆含 PyJWT 兩筆「無修補版本」，其範圍 ≤ 2.13.0）新版本都落在範圍外。`filelock` 要求 `>=4.2.1`，但 litellm 1.108.2 限制 `filelock<4`，所以讓 litellm 降到 1.103.10（仍高於告警的修補版 1.95.0）。上游的主鎖指向 Block 內部 registry（`global.block-artifacts.com`），外部無法解析；`uv lock` 會把整份鎖改成 `pypi.org`，所以主鎖 diff 很大但實質只是版本與 registry 位址。同步上游時這兩份鎖的衝突一律取上游再重做。驗證：`pytest` 90 過、1 失敗（`test_composed_system_prompt_carries_persona_and_team_roster` 斷言 POSIX 檔案權限 0o600，在 NTFS 上本來就不成立，與鎖檔無關）。
+- `pnpm-lock.yaml`：`@tiptap/*` 3.22.5 → 3.30.5、`prosemirror-view` 1.41.8 → 1.42.9、`linkifyjs` 4.3.2 → 4.4.0（連帶 prosemirror-model／transform 等）。**不能只升 tiptap**：`extension-link` 會帶進第二份 `linkifyjs` 4.4.0，而 `desktop/package.json` 直接依賴的是 4.3.2，兩份實例各自持有 linkify 的協定登錄，`composerLinkPastePipeline.test.mjs` 的 5 個測試全紅（「Link's onCreate to register the buzz protocol」）。把 `linkifyjs` 一起刷新到 4.4.0 讓整棵樹只剩一份後 5/5 轉綠。作法：`pnpm update` 後還原 `desktop/package.json`，再 `pnpm install --no-frozen-lockfile`；manifest 宣告不動。驗證：`pnpm install --frozen-lockfile`、`pnpm typecheck` 通過、`pnpm test` 第一階段 6834／6834 過。第二階段 jsdom 有 7 筆失敗（`useManagedAgentActions.relayRemoved.jsdom-test.mjs`），還原成舊鎖後同一檔同樣失敗，所以是本機 Node 26 的既有問題（見 2026-11-07 條目 Node 25+ 內建 `localStorage`），不是這次刷新造成。
+
+**關（Dependabot，tolerable_risk）：**
+
+- `zip` 10 筆（根 `Cargo.lock` 5、桌面鎖 5）：根鎖的 zip 8.6.0 只經 dev-only 的 `buzz-mesh-smoke` → mesh-llm 進來，`deny.toml` 已為 0367／0368／0369／0429 留下理由。桌面鎖另有 zip 8.6.0（同樣經 mesh-llm，手動複製條目、從不呼叫 `extract`）與 zip 4.6.1（`tauri-plugin-updater` 2.10.1，Windows 路徑會 `extract`，但在 `updater.rs:712` 先以 app 內嵌公鑰驗 minisign 簽章，檔案內容由發佈者掌控）。`buzz-desktop` 自己用 zip 9.0.5。修法要 mesh-llm 與 tauri-plugin-updater 各自升級。重審：mesh-llm#2471 釋出、tauri-plugin-updater 換 zip。
+- `rmcp` 12 筆（根鎖 4、桌面鎖 4、`crates/buzz-agent/Cargo.toml` 4）：修補版是 2.x 大版本，宣告由上游持有（2026-11-07 已重新延後，另見該條目 rmcp 3 的 API 改名）。告警涉及 OAuth metadata 探索、streamable-HTTP 伺服器 session 表、自訂 HTTP header 轉址洩漏，這些都要啟用對應 feature；實際啟用的是 `client`＋`transport-child-process`（buzz-agent）與 `server`＋`transport-io`＋`macros`（根 workspace），都沒有 HTTP 傳輸與 OAuth。重審：上游升 rmcp。
+- `glib` 1 筆：`cargo tree --target x86_64-pc-windows-msvc -i glib` 為空，只在 Linux GTK 圖（gtk／atk／tray-icon，經 tauri）。修法是 gtk-rs 0.20，要 tauri 升級。重審：上游升 tauri。
+- `postcss-selector-parser` 1 筆：6.0.10 是 `@tailwindcss/typography` 0.5.20 的精確版本依賴，不是刷新鎖檔能動的；公告明說受信任來源的建置期使用不受影響，runtime 沒有解析不受信任選擇器。重審：typography 升版或換成依賴 ≥6.1.5。
+
+**關（CodeQL Rust，100 筆）：** 逐筆依路徑與 `#[cfg(test)]` 區間判定，沒有發現產品碼的真實問題，所以沒有任何一筆用 `won't fix`。
+
+- `used in tests` 88：`tests/`、`examples/`、`*_tests.rs`、smoke crate 與 `#[cfg(test)] mod` 內的測試值（hard-coded-cryptographic-value 61、cleartext-logging 20、log-injection 4、non-https-url 3）。
+- `false positive` 12：`pairing/crypto.rs:55`（HKDF 依規格使用空 salt，金鑰材料是隨機 session secret）、`pairing/session.rs:125`、`push-gateway/grant.rs:61`、`token.rs:73`（零初始化緩衝區馬上被 `rand::fill`／`OsRng` 覆寫）、`buzz-admin/main.rs:191`（`generate-key` 指令的輸出本來就是新產生的私鑰）、`buzz-pairing-cli/main.rs:131`（列印給使用者自己看的 QR URI，訊息已警告勿外流）、`reconcile.rs:218/270/274`（記錄 Kubernetes Secret 的名稱，不是內容）、`apns.rs:129`（正式 base URL 寫死為 https，http 只在測試建構子）、`jwks/mod.rs:698`（公開 JWKS 強制 https，http 只在密封的 mesh 傳輸契約內）、`git/transport.rs:1030`（command-line-injection，見下）。
+- `command-line-injection`（`crates/buzz-relay/src/api/git/transport.rs:1030`）：`service` 來自查詢參數，但在 `:918-920` 先對 `git-upload-pack`／`git-receive-pack` 做精確白名單；子命令只由 `strip_prefix("git-")` 得出；`Command::new("git")` 以分開的引數呼叫（不經 shell）；`repo.path()` 是伺服器建立的暫存目錄；`harden_git_env` 清空環境。判斷為誤報。
+- 流程備註：一開始 `comm` 因排序方式不同把 4 筆誤報當成 `used in tests` 一起關掉，發現後重新開啟並以正確理由重關（`pairing/crypto.rs:55`、`session.rs:125`、`grant.rs:61`、`token.rs:73`）；最終分佈已用 API 讀回核對。
+
+**沒處理：** 非 Rust 的 code scanning（JS 測試檔的 regex／sanitization、`actions/*` workflow 權限與 checkout、`py/clear-text-storage`，共 53 筆）不在這輪範圍；`actions/*` 與 workflow 屬上游持有檔，其餘待另行分類。
