@@ -2,8 +2,8 @@
   "_comment": "Reviewed-but-not-now decisions for tools/check_dependency_freshness.py. Each entry needs deferredLatest and reason; it expires by itself once the registry passes that release. A permanent policy belongs on the declaring line as `# freshness-hold:` instead.",
   "deferrals": {
     "@mediapipe/tasks-vision": {
-      "deferredLatest": "1.2.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 1.2.0."
+      "deferredLatest": "1.2.2",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 1.2.2."
     },
     "@tauri-apps/api": {
       "deferredLatest": "2.12.4",
@@ -90,8 +90,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "docker/login-action": {
-      "deferredLatest": "4.7.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "4.8.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 4.8.0."
     },
     "docker/metadata-action": {
       "deferredLatest": "6.2.0",
@@ -109,13 +109,21 @@
       "deferredLatest": "0.4.3",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
+    "github/codeql-action/analyze": {
+      "deferredLatest": "4.39.3",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 4.39.3."
+    },
+    "github/codeql-action/init": {
+      "deferredLatest": "4.39.3",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 4.39.3."
+    },
     "helm/chart-testing-action": {
       "deferredLatest": "2.9.0",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "helm/kind-action": {
-      "deferredLatest": "1.15.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "1.15.2",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 1.15.2."
     },
     "imagesize": {
       "deferredLatest": "0.15.0",
@@ -126,8 +134,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "jsdom": {
-      "deferredLatest": "30.1.3",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "31.0.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 31.0.0."
     },
     "jsonwebtoken": {
       "deferredLatest": "11.1.0",
@@ -135,15 +143,15 @@
     },
     "k8s-openapi": {
       "deferredLatest": "0.29.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 0.29.0."
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 0.29.0."
     },
     "keyring": {
       "deferredLatest": "4.2.0",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "kube": {
-      "deferredLatest": "4.2.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "5.0.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 5.0.0."
     },
     "launchdarkly-server-sdk": {
       "deferredLatest": "3.3.2",
@@ -158,16 +166,16 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "motion": {
-      "deferredLatest": "14.7.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 14.7.1."
+      "deferredLatest": "14.10.1",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 14.10.1."
     },
     "neteq": {
       "deferredLatest": "0.9.1",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "nostr": {
-      "deferredLatest": "0.45.5",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "0.45.7",
+      "reason": "nostr 0.45 removed the crate-root re-exports (nostr::Event, Keys, PublicKey, Kind, Tag, Filter, EventBuilder, SECP256K1, plus the nostr::secp256k1 and nostr::hashes re-exports); a trial bump on 2026-11-07 failed in buzz-core alone with 55 resolution errors, and nostr is imported by 404 .rs files across 25 workspace crates and the Tauri crate. Upstream block/buzz main still declares nostr 0.44, so migrating here would fork the whole codebase from upstream. Trigger: upstream bumps nostr (arrives with the next sync), or the registry passes 0.45.7."
     },
     "openai/codex-action": {
       "deferredLatest": "1.13",
@@ -194,16 +202,16 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "pnpm/action-setup": {
-      "deferredLatest": "6.1.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "6.1.1",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 6.1.1."
     },
     "quick-xml": {
       "deferredLatest": "0.42.0",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "rmcp": {
-      "deferredLatest": "3.8.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 3.8.0."
+      "deferredLatest": "3.9.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 3.9.0."
     },
     "rodio": {
       "deferredLatest": "0.23.0",
@@ -214,8 +222,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "rusqlite": {
-      "deferredLatest": "0.41.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "0.41.1",
+      "reason": "Cannot resolve: rusqlite 0.41 needs libsqlite3-sys 0.39, which `links = \"sqlite3\"`, while the git dependency mesh-llm-log-store (tag v0.76.2, pulled in by mesh-llm-host-runtime in desktop/src-tauri) requires rusqlite ^0.40 / libsqlite3-sys ^0.38 and cargo allows one sqlite3 native link per graph (`cargo update` fails on 2026-11-07). Trigger: the mesh-llm tag pinned in desktop/src-tauri/Cargo.toml moves to a release that depends on rusqlite 0.41, or the registry passes 0.41.1."
     },
     "rust-s3": {
       "deferredLatest": "0.38.0",
@@ -242,8 +250,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "taiki-e/install-action": {
-      "deferredLatest": "2.87.33",
-      "reason": "Re-reviewed 2026-10-28 after the 2026-10-27 entry (2.87.32) expired on the next patch release (2.87.33, published 2026-10-28). Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 24a3706, now merged into the fork, still pins the same SHA; the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
+      "deferredLatest": "2.90.2",
+      "reason": "Re-reviewed 2026-11-07 (latest 2.90.2); earlier re-review 2026-10-28 after the 2026-10-27 entry (2.87.32) expired on the next patch release (2.87.33, published 2026-10-28). Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 24a3706, now merged into the fork, still pins the same SHA; the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
     },
     "tokenizers": {
       "deferredLatest": "0.23.2",
@@ -254,8 +262,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "toml": {
-      "deferredLatest": "1.1.8+spec-1.1.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "1.2.1+spec-1.1.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 1.2.1+spec-1.1.0."
     },
     "tower-http": {
       "deferredLatest": "0.7.1",
@@ -278,12 +286,12 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "virtua": {
-      "deferredLatest": "0.54.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-10-28 at 0.54.0."
+      "deferredLatest": "0.54.2",
+      "reason": "Patched dependency: patches/virtua@0.49.3.patch edits the minified lib/index.cjs and lib/index.js and widens the Virtualizer `itemSize` type to accept a per-item function. virtua 0.54.2 restructured those internals and still declares `itemSize?: number` only, so the patch neither applies nor has an upstream equivalent; a rebase means re-implementing the feature inside the scroll engine and re-validating timeline scroll anchoring. Upstream block/buzz main still pins virtua 0.49.3 with the same patch. Trigger: virtua ships function-valued itemSize, or upstream rebases the patch, or the registry passes 0.54.2."
     },
     "vitest": {
-      "deferredLatest": "5.0.5",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "5.1.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 5.1.0."
     },
     "window-vibrancy": {
       "deferredLatest": "0.8.1",

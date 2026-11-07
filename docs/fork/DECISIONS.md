@@ -340,3 +340,19 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - 裁決：只把這兩個 job 的 `runs-on` 改成 `ubuntu-24.04`，加上 `fork patch (SanHsien/buzz)` 標記並登記到 FORK.md。不在 fork 自行升級 `@playwright/test`：本 fork 產品依賴跟隨上游，Playwright 1.65.0 雖已支援 ubuntu26.04，仍等上游升級。
 - 移除條件：上游鎖到支援 ubuntu26.04 的 Playwright 後，同步時改回 `ubuntu-latest` 並刪掉這條修補。
 
+
+## 2026-11-07 依賴新鮮度：沿用 2026-10-26 規則重新延後，另有三項技術性延後
+
+`Dependency freshness` 在 main 紅燈（2026-11-01 排程失敗；本機 18 列 `REVIEW UPDATE`）。本 fork 沒有「開始自己維護產品依賴」的維護者決定，所以 2026-10-26 的規則（宣告下限與上游持有的 workflow pin 不升，`FORK.md` 的「manifest 宣告不動」）仍然適用；上游 `block/buzz` main 在這 18 列也沒有任何一列比本 fork 新，沒有可跟的版本。試升過的一版（action pin、npm、kube／rmcp／toml）已全部還原，不留在樹裡。
+
+**重新延後（`deferredLatest` 改為目前 registry 最新，理由沿用 10-26 文字並註明 2026-11-07 重審）：** `@mediapipe/tasks-vision` 1.2.2、`jsdom` 31.0.0、`motion` 14.10.1、`vitest` 5.1.0、`kube` 5.0.0、`k8s-openapi` 0.29.0、`rmcp` 3.9.0、`toml` 1.2.1、`docker/login-action` 4.8.0、`helm/kind-action` 1.15.2、`pnpm/action-setup` 6.1.1、`github/codeql-action/init`／`analyze` 4.39.3、`taiki-e/install-action` 2.90.2（保留原本較長的理由與觸發條件：上游升 pin 隨同步帶入，或 fork 開始自己維護 CI workflow）。
+
+**新增三項有技術理由的延後（寫在 `.github/dependency-deferrals.json`，各自附觸發條件）：**
+
+- `nostr` 0.44 → 0.45.7：0.45 移除 crate 根的重新匯出（`nostr::Event`、`Keys`、`PublicKey`、`Kind`、`Tag`、`Filter`、`SECP256K1`、`nostr::secp256k1`、`nostr::hashes`）。試升後單單 `buzz-core` 就 55 個解析錯誤；404 個 `.rs` 檔、25 個 workspace crate 加 Tauri 都在用；上游仍是 0.44。這個理由同樣適用於 kube 5（連帶 k8s-openapi 0.29 移除 `v1_31` feature）與 rmcp 3（`buzz-agent` 的 `Content` API 改名）：升了就是分岔產品碼。
+- `rusqlite` 0.40 → 0.41.1：無法解析。0.41 需要 `libsqlite3-sys 0.39`（`links = "sqlite3"`），而 `mesh-llm-log-store`（git tag `v0.76.2`）要求 rusqlite ^0.40；一個依賴圖只能有一份 sqlite3 原生連結，`cargo update` 直接失敗。觸發：Tauri `Cargo.toml` 釘的 mesh-llm tag 換到依賴 rusqlite 0.41 的版本。
+- `virtua` 0.49.3 → 0.54.2：`patches/virtua@0.49.3.patch` 改壓縮後的 `lib/index.{cjs,js}` 並把 `itemSize` 型別放寬成函式；0.54.2 內部已重排且 `itemSize` 仍只有 `number`，補丁套不上也沒有上游等價。上游仍釘 0.49.3 加同一個補丁。
+
+**試升時順便得到的資訊（供日後上游升級時參考，不是本 fork 的變更）：** jsdom 30 起 engines 為 `^24.15.0`（hermit 是 24.15.0，Windows build job 釘 24.14.1）；`pnpm update` 升 jsdom 31 時 `parse5-parser-stream@8.1.0` 會沿用舊鎖的 `parse5@8.0.1` 而缺 `flushCharacters`，需 `pnpm dedupe`；motion 14.10.1 發佈不足一天會讓 pnpm 往 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude`；Node 25+ 的內建 `localStorage` 會讓 `test-jsdom-setup.mjs` 的 jsdom 測試失敗（Node 24 正常）；kube 5 的 `Time` 由 chrono 改 jiff、`Error::Api` 改 `Box<Status>`；rmcp 3 的 `Content`／`RawContent` 合併為 `#[non_exhaustive]` 的 `ContentBlock`。
+
+**`deny.toml` 的 `RUSTSEC-2026-0381` ignore** 目前沒有匹配任何 crate（cargo-deny 警告 unmatched）。沒有移除：它是上游自己的 ignore，移除與否屬上游；下次同步上游時再看。
