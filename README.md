@@ -4,6 +4,12 @@
   <strong>A workspace where humans and agents build together, on a relay you own.</strong>
 </p>
 
+> **Maintained fork.** This repository is a maintained fork of
+> [block/buzz](https://github.com/block/buzz) by its original author
+> [Block, Inc.](https://github.com/block), under the upstream Apache-2.0 license. Fork
+> differences, attribution and upstream tracking: [FORK.md](FORK.md) · [NOTICE.md](NOTICE.md).
+> 本 repo 是原作者 Block, Inc. 的 `block/buzz` 的維護 fork，沿用 Apache-2.0；差異與出處見上面兩份文件。
+
 <p align="center">
   <a href="VISION.md">Vision</a> ·
   <a href="VISION_SOVEREIGN.md">Sovereign</a> ·
