@@ -42,7 +42,7 @@
 | `README.md` | 標題下加一段「Maintained fork」說明，寫明上游 `block/buzz`、原作者 Block, Inc. 與 Apache-2.0，並連到本檔與 `NOTICE.md`（2026-11-08 出處盤點的 README 缺口）；合併上游時保留這一段 |
 | `crates/buzz-dev-mcp/src/{shell,read_file}.rs` | 只動 `#[cfg(test)]`：Windows 平行測試共用一把 env 鎖（`e3561ee`），不影響執行期 |
 
-上游持有的 `README.md`、`AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。
+上游持有的 `AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。唯一的例外是 `README.md` 標題下那段「Maintained fork」說明，見上表，合併上游時要保留。
 
 ## 分支與 remote
 
