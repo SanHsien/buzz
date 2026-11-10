@@ -537,7 +537,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9195 | MERGED | `d1ba7ee67781` | fix(relay): deliver multi-node fan-out concurrently and never drop silently | **skip**：拒收：新增行超過 400 字元（ARCHITECTURE.md, Justfile），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
 | #9196 | MERGED | `d9b63b2e3eda` | fix(cli): clearer desktop pairing errors, paired default relay, and auth desktop list | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9197 | MERGED | `e3e8ccf5a8eb` | perf(db): bound since-limited events reads with the month-floor literal | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
-| #9198 | OPEN | `bae11caf0b3d` | fix(media): run thumbnail regeneration tests in CI and cap rebuild pixels | **defer**：OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard |
+| #9198 | OPEN | `bae11caf0b3d` | fix(media): run thumbnail regeneration tests in CI and cap rebuild pixels | **defer**：OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 ubuntu-24.04 釘 |
 | #9199 | MERGED | `85d3a2858c59` | perf(relay): serve restriction rows for 10 s with cross-pod invalidation | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9200 | MERGED | `6aea653362d2` | fix(db): keep retained fence proofs when a probe fails | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9202 | OPEN | `ac4fa22db5d2` | fix(cli): treat a retried sidebar write the relay already stored as success | **defer**：OPEN，head 釘在 ac4fa22db5d2，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
@@ -605,7 +605,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9275 | MERGED | `01c224e68ff4` | test(ios): wait for a key, foreground-active window before presenting in RunnerTests | **defer**：已合併，內容經 commit 軸抵達；行動端變更，需 iOS／Android 原生驗收環境 |
 | #9276 | OPEN | `53192ba1443d` | fix(desktop): start the message target highlight when the row is on screen | **defer**：OPEN，head 釘在 53192ba1443d，合併後走 commit 軸；桌面端（Tauri／Windows）變更，需實機驗收 |
 | #9277 | MERGED | `0737d665bc16` | test(desktop): wait on real readiness signals in audience and community-rail specs | **defer**：已合併，內容經 commit 軸抵達；桌面端（Tauri／Windows）變更，需實機驗收 |
-| #9278 | OPEN | `5fb1e10d1f36` | [buzz] Log minimal APNs rejection diagnostics without personal data | **defer**：OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard；草稿／WIP |
+| #9278 | OPEN | `5fb1e10d1f36` | [buzz] Log minimal APNs rejection diagnostics without personal data | **defer**：OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 ubuntu-24.04 釘；草稿／WIP |
 | #9279 | CLOSED | `782b6b26d235` | fix(relay): distinguish unavailable tenant lookups from missing hosts | **skip**：closed 未合併，上游未收；標題與檔案清單看不出 Windows／CJK 專屬缺陷，不採用 |
 | #9280 | OPEN | `598acbf040a6` | fix(github): pin API version 2026-03-10 for the Buzz releases lookup | **defer**：OPEN，head 釘在 598acbf040a6，合併後走 commit 軸；web 前端變更，需瀏覽器與部署驗收 |
 | #9281 | OPEN | `1138ace5605c` | ci: prevent Codex review hangs from retained log streams | **defer**：OPEN，head 釘在 1138ace5605c，合併後走 commit 軸；CI workflow 變更，未動 fork 修補的檔案；fork 的 main CI 沒有紅燈觸發採用；草稿／WIP |

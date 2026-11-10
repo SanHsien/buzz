@@ -11615,7 +11615,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard"
+   "reason": "OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 ubuntu-24.04 釘"
   },
   {
    "number": 9199,
@@ -13379,7 +13379,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard；草稿／WIP"
+   "reason": "OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 ubuntu-24.04 釘；草稿／WIP"
   },
   {
    "number": 9279,
