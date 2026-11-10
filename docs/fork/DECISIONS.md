@@ -411,3 +411,18 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 **考慮過、沒採用：** 退回 tiptap 3.22.5。可以不動產品碼，但 `@tiptap/core` < 3.30.4／3.30.5 會讓 #112（`mergeAttributes()` 的 `__proto__`）與 #114（Markdown 屬性解析的二次方 ReDoS）重新開啟；沒有任何 ≥ 3.30.5 的版本保留舊行為（3.23.1 之後全部相同），所以「升到另一組一致版本（例如整組 3.33.0）」也不能解。若維護者寧可不碰產品碼，退路是鎖回 3.22.5 並把 #112、#114 以 tolerable_risk 關閉：#114 的程式碼路徑在 `@tiptap/core` 的 `MarkdownManager`，本 repo 用的是第三方 `tiptap-markdown`，不載入它；#112 需要攻擊者控制的 attrs 物件帶 own `__proto__` key，本 repo 沒有找到這樣的入口（未做完整的可達性審計）。
 
 **驗證（本機 Windows、Playwright 1.60；CI 是 ubuntu-24.04，沒有在本機跑 Linux）：** 退回 `6bfb6f6b9` 的鎖＋原產品碼時 `virtualization.spec.ts:102` 綠；`6bb49dbd0` 的鎖時紅；只對齊 bubble／floating-menu 仍紅；加上 `chain()` 防護後 CI 列出的 7 條都綠（`virtualization:102`、`:201`、`workflows:297`、`mention-recipients:122`、`inbox-edit:560`、`invites-settings-screenshots:39` 綠；`workflow-local-controls:151` 的行為斷言全過，只剩視覺快照因為 repo 只提交 linux 快照、本機缺 `-win32.png` 而報「snapshot doesn't exist」，與修補無關，產生的檔案沒有提交）。`pnpm typecheck` 過；`pnpm test` 第一階段 6835／6835（含新測試），第二階段 jsdom 仍是本機 Node 26 的既有 7 筆失敗（`relayRemoved`、`legacyCommunityReadmit`，兩檔都只涉及 relay 重新收錄，與編輯器無關）。`virtualization.spec.ts:247` 在本機同樣紅（捲動位移 120 < 200），退回 `6bfb6f6b9` 的鎖＋原碼也一樣紅，是本機 Windows 滾輪行為，不是這次造成，CI 上它是綠的。
+
+## 2026-11-10 上游積壓逐筆裁決（commit `d342cf1 → 44b3c48`；PR 8920 → 9311；issue 8919 → 9299）
+
+`Upstream check`（2026-11-09）紅燈，`--strict` 回 exit 1：238 個 commit、359 筆 PR、25 筆 issue。證據取法同 11-02：commit 用 `gh api repos/block/buzz/commits/<SHA>` 的 diff，PR 取 `pulls/<n>` 的 base／head SHA 與目前 head 的 diff（359 筆的 head 與 `gh pr list` 當下一致，檔案數與 metadata 一致），issue 用 state=all 清單內文。逐筆裁決、diff SHA-256、檔案清單與掃描命中在 [正式裁決](UPSTREAM_REVIEW_2026-11-10.md) 與 [機器證據](UPSTREAM_REVIEW_2026-11-10.json)。
+
+結果：commit 1 adopt／32 skip／205 defer；PR 1 adopt／75 skip／283 defer；issue 0 adopt／14 skip／11 defer。
+
+- **那 1 筆 adopt 不是新決定：** `c9b8f1176`（#8922）在 11-07 已因 Security / Dependency policy 紅燈 cherry-pick 進 fork（`e74c2e4e3`），它在 `d342cf1` 之後，所以水位推進時才算進這批。沒有其他採用。
+- **為什麼沒有新採用：** 產品行為與上游相同（FORK.md），這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有原生與 Postgres 驗收環境；fork `main` 最新一次 CI、CodeQL、Docker image、helm chart、Sprig 皆 success，沒有像 11-07 那樣的紅燈需要上游修補。
+- **skip（拒收）commit 32、PR 75：** 新增行超過 400 字元、零寬／雙向控制字元或樣式命中，依 UPSTREAM.md 字面拒收、不自行豁免；加上 closed 未合併的 PR。控制字元與動態執行樣式的命中逐筆讀過（Unicode 測試向量、Rust 對 Redis 腳本的 `eval(` 呼叫、文件裡的 GitHub URL、emoji ZWJ 測試字串），同步時整批重審。
+- **ROADMAP 觸發條件逐條對照，沒有任何一條成立：** #8856 仍 OPEN 且無新修正；#8643 仍 OPEN；`ttsLiveMessages.ts` 與 `useRichTextEditor.ts` 在範圍內沒被動到；上游 `Cargo.lock` 仍有 `webpki-roots 0.26.11`；`deny.toml` 在範圍內只有已採用的 `c9b8f1176`。
+- **同步時要處理的 fork 衝突點：** `e8a4bc159`（#9310）改 `docker.yml`，`3e9d2e90c`（#9303）新增發佈映像的 `docker-manual.yml`（需補非 `block` owner 不 push 的 guard，否則 `tests/fork` 的發佈 job 檢查會紅）；上游鎖檔變動與 fork 的鎖檔升級衝突時以上游為準再重做。這次沒有改任何上游持有檔，FORK.md 不變。
+- **合進非 main 分支的 PR：** #9000、#9020、#9078、#9175、#9232、#9289、#9294 狀態 MERGED 但 base 是 `mobile-v0.27` 或功能分支，不視為已經 commit 軸抵達。
+
+OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水位：commit `44b3c4823f0cf1f7715f85dbf5566cb64e848162`、PR 9311、issue 9299。這只代表審查完成，不代表產品同步或告警解除。
