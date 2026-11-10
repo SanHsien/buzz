@@ -1,14 +1,14 @@
 # 2026-11-10 上游差異裁決
 
-接續 [2026-11-02 裁決](UPSTREAM_REVIEW_2026-11-02.md)。範圍：commit `d342cf141cb3211c8e5a6c74f881cf1d39ad3b12..44b3c4823f0cf1f7715f85dbf5566cb64e848162`（238 筆）；PR #8921–#9311 中檢查器列出的 359 筆；issue 25 筆（state=all）。機器證據（SHA、diff SHA-256、檔案清單、掃描命中）在 [UPSTREAM_REVIEW_2026-11-10.json](UPSTREAM_REVIEW_2026-11-10.json)。
+接續 [2026-11-02 裁決](UPSTREAM_REVIEW_2026-11-02.md)。範圍：commit `d342cf141cb3211c8e5a6c74f881cf1d39ad3b12..44b3c4823f0cf1f7715f85dbf5566cb64e848162`（238 筆）；PR #8921–#9312 中檢查器列出的 360 筆；issue 25 筆（state=all）。機器證據（SHA、diff SHA-256、檔案清單、掃描命中）在 [UPSTREAM_REVIEW_2026-11-10.json](UPSTREAM_REVIEW_2026-11-10.json)。
 
 ## 結論
 
-- commit：238 筆，1 adopt、32 skip、205 defer。
-- PR：359 筆，1 adopt、75 skip、283 defer。
+- commit：238 筆，2 adopt、32 skip、204 defer。
+- PR：360 筆，2 adopt、75 skip、283 defer。
 - issue：25 筆，0 adopt、14 skip、11 defer。
 
-這批沒有新採用的項目；commit 軸與 PR 軸各有的 1 筆 adopt 是 `c9b8f1176`／#8922，2026-11-07 已因紅燈採用，這裡只歸帳。其餘不採用的原因：fork 的政策是產品行為與上游相同、不自行分岔（FORK.md），而這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有對應的原生與 Postgres 驗收環境。也沒有像 2026-11-07 的 #8711／#8922 那樣的例外觸發：2026-11-10 查 fork `main` 最新一次 CI、CodeQL、Docker image、helm chart、Sprig 皆 success，沒有紅燈需要上游修補。defer 項目的唯一出路是 ROADMAP「同步延後變更」。
+adopt 共 commit 軸 2 筆、PR 軸 2 筆：`c9b8f1176`／#8922 在 2026-11-07 已因紅燈採用，這裡只歸帳；`658253009`／#9287（rmcp 3.4.1 → 3.9.0 與 deny.toml 的 RUSTSEC-2026-0459／0462 ignore）因觸發 ROADMAP「隨上游遷移 rmcp」條件而在這次新採用。其餘不採用的原因：fork 的政策是產品行為與上游相同、不自行分岔（FORK.md），而這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有對應的原生與 Postgres 驗收環境。沒有像 2026-11-07 那樣的紅燈例外：2026-11-10 查 fork `main` 最新一次 CI、CodeQL、Docker image、helm chart、Sprig 皆 success，沒有紅燈需要上游修補；但 rmcp 的安全公告觸發了 ROADMAP 的「隨上游遷移 rmcp」條件，所以追加採用 `658253009`／#9287（見下）。defer 項目的唯一出路是 ROADMAP「同步延後變更」。
 
 ## 方法與掃描界限
 
@@ -25,9 +25,10 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 
 ## 逐項人工確認
 
-- **ROADMAP 觸發條件逐條對照，沒有觸發：** #8856（Windows Desktop 連自架 relay）仍 OPEN，`updatedAt` 為 2026-11-01，審查範圍內沒有新的修正 commit；#8643（Hermes 發訊）仍 OPEN；#8624 仍 CLOSED；`ttsLiveMessages.ts`（code scanning js/redos #22）與 `useRichTextEditor.ts`（fork 的 chain() 防護）在範圍內沒有任何 commit 動到，沒有上游修正可跟進，也沒有上游自補防護可丟；上游根目錄 `Cargo.lock` 仍有 `webpki-roots 0.26.11`，RUSTSEC-2026-0381 ignore 的移除條件未成立；範圍內動 `deny.toml` 的只有已於 11-07 採用的 `c9b8f1176`。
-- **fork 持有檔：** 範圍內碰到 `.github/workflows/docker.yml` 的是 `e8a4bc159`（#9310）與 `3e9d2e90c`（#9303）；`sprig*.yml`、`_ci-rust.yml` 沒有被動到。這兩個 commit 都 defer，同步時重做 owner guard。這次沒有改任何上游持有檔，所以 FORK.md 不需更新。
+- **ROADMAP 觸發條件逐條對照，只有 rmcp 那條成立：** `658253009`（#9287）把 rmcp 3.4.1 升到 3.9.0 並新增 deny.toml 的 RUSTSEC-2026-0459／0462 ignore，觸發「隨上游遷移 rmcp」條件的 rmcp 3 部分，已採用（buzz-agent 的 rmcp 1.8 與桌面鎖檔的 rmcp 沒有被這個 commit 處理）。其餘沒有成立：#8856（Windows Desktop 連自架 relay）仍 OPEN，`updatedAt` 為 2026-11-01，範圍內沒有修正 commit；#8643（Hermes 發訊）仍 OPEN；#8624 仍 CLOSED；`ttsLiveMessages.ts`（code scanning js/redos #22）與 `useRichTextEditor.ts`（fork 的 chain() 防護）在範圍內沒有任何 commit 動到；上游根目錄 `Cargo.lock` 仍有 `webpki-roots 0.26.11`，RUSTSEC-2026-0381 ignore 的移除條件未成立；範圍內動 `deny.toml` 的是 `c9b8f1176`（已於 11-07 採用）與 `658253009`（這次採用）。
+- **同步時的 fork 衝突點：** `.github/workflows/_ci-relay.yml`（fork 把 `desktop-e2e-integration-shard` 釘 `ubuntu-24.04`）被 `0a06c0b3c`、`b6d440314`、`96af488d9` 動到；`.github/workflows/docker.yml`（owner guard）被 `e8a4bc159`（#9310）動到；`deny.toml` 被 `c9b8f1176` 與 `658253009` 動到（fork 另有 RUSTSEC-2026-0253 ignore，已保留）；`3e9d2e90c`（#9303）只新增 `docker-manual.yml`，不動 `docker.yml`，但它是新的發佈 workflow，同步時要補 owner guard。`sprig*.yml`、`_ci-rust.yml`、`_ci-desktop.yml` 沒有被動到。這次對上游持有檔的改動只有 `Cargo.lock` 與 `deny.toml`（皆已列在 FORK.md 修補表）。
 - **Windows／CJK：** 對新增行掃 `cfg(windows)`、`.exe`、`tauri.localhost`、`IME`、`isComposing`、`Windows`、CJK 字元等樣式。commit 命中：`e3a0f3d59`、`c8d736642` 是 CLI 說明「桌面憑證提供者尚不支援 Windows」，`b329e05c5` 是路徑分隔字元註解，`a1efbf63b` 是行動端 IME 處理，`303157f53` 與 `dafe31bfe` 是 CJK 測試字串；沒有任何一個修的是 Windows 或 CJK 專屬缺陷。非合併 PR 命中：#8924（OpenCode 無 PowerShell 安裝器的註解）、#9008（accent 摺疊；CJK 只出現在「日本語原樣通過」的回歸測試）、#9025／#9248（iOS 輸入法）、#9193（路徑分隔註解），同樣都不是。35 筆 closed 未合併 PR 逐一看過標題與檔案數，沒有可採用的 Windows／CJK 缺陷修補。
+- **skip 的意思：** 已併入上游 main 的 skip 項，日後 fast-forward 同步仍會進來；skip 是「同步時重審」，不是「永遠不要」。其中 `96af488d9`／#9077（私有頻道附件存取撤銷，存取控制修正）只因長行被拒，同步時優先重審。
 - **合進非 main 分支的 PR：** #9000、#9020、#9078、#9175、#9232、#9289、#9294 狀態為 MERGED，但 base 是 `mobile-v0.27` 或功能分支，沒有對應的 main commit，不能說「內容經 commit 軸抵達」；各自標在 PR 軸的理由裡。
 - **編號落在水位之前的 commit：** commit 軸有 29 個 commit 的 PR 編號 ≤ 8920（PR 軸不會再列），其 diff 以 commit 為準逐筆裁決。
 
@@ -252,7 +253,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | `5f5994054481` | fix(mobile): steady New DM picker rows and animate picks (#9249) | **defer**：行動端變更，需 iOS／Android 原生驗收環境；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `c502e53e634b` | feat(mobile): tag the reacted-to message author on reactions (#9141) | **defer**：行動端變更，需 iOS／Android 原生驗收環境；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `34bab2f64b6a` | feat(ci): allow admin dispatch of desktop candidate validation (#9288) | **defer**：CI workflow 變更，未動 fork 修補的檔案；fork 的 main CI 沒有紅燈觸發採用；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
-| `658253009c51` | fix: unblock image audit with patched MCP SDK (#9287) | **defer**：依賴鎖檔／政策變更，fork 的鎖檔升級與 deny.toml 修補須在同步時重做；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
+| `658253009c51` | fix: unblock image audit with patched MCP SDK (#9287) | **adopt**：因 rmcp 3.4.1 的安全公告（RUSTSEC-2026-0462 等）與 deny.toml 的 0459／0462 ignore 採用：以 `cherry-pick -x` 帶入，Cargo.lock 衝突時保留 fork 的鎖檔升級、只把 rmcp 與 rmcp-macros 升到 3.9.0，deny.toml 保留 fork 的 RUSTSEC-2026-0253 ignore；詳見 DECISIONS.md 2026-11-10 條目 |
 | `3071279cd863` | NEXUS-4336: Wait for desktop-provider socket ownership proof (#9270) | **defer**：relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `838976d6e454` | Add invite preview video and fallback poster (#9282) | **skip**：拒收：新增行超過 400 字元（previews/invite-video/README.md, previews/invite-video/preview.js），命中 UPSTREAM.md 的拒收規則；不自行豁免。重審條件：上游改寫該行或維護者明確決定 |
 | `b082b1464ce5` | test(relay): give every media e2e upload its own blob hash (#9272) | **defer**：relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
@@ -270,11 +271,11 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | `18f3e35413c6` | docs: point the README to Buzz 1.0 in block/buzz-app (#9296) | **defer**：文件變更，隨產品同步一併帶入；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `773849665e05` | Serve video and poster previews for invite links (#9306) | **defer**：relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `402bd1897f8b` | fix(mobile): bump Flutter to 3.47.9 for Android TLS fix (#9309) | **defer**：腳本／工具變更，隨產品同步一併帶入；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
-| `3e9d2e90ce87` | Add manual-only relay image publishing (#9303) | **defer**：新增發佈映像的 workflow `docker-manual.yml`（手動觸發）；fork 的發布 guard 規則要求非 `block` owner 不得 push 映像，同步時須先補 owner guard 並讓 tests/fork 的發佈 job 檢查通過；fork 的 main CI 沒有紅燈觸發採用；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
+| `3e9d2e90ce87` | Add manual-only relay image publishing (#9303) | **defer**：只新增 `.github/workflows/docker-manual.yml`（手動觸發、發佈映像），不動 `docker.yml`；fork 的發布 guard 規則要求非 `block` owner 不得 push 映像，同步時須先補 owner guard 並讓 tests/fork 的發佈 job 檢查通過，否則該檢查會紅；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `e8a4bc15917e` | ci(docker): skip relay image publishes for main pushes outside the build context (#9310) | **defer**：CI workflow 變更，與 fork 的 workflow 修補（.github/workflows/docker.yml）衝突，同步時一併重做；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 | `44b3c4823f0c` | Add swipeable photo stacks and native iOS gallery preview (#9259) | **defer**：行動端變更，需 iOS／Android 原生驗收環境；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」 |
 
-## PR 軸（359 筆）
+## PR 軸（360 筆）
 
 | PR | 狀態 | head | 標題 | 裁決與理由 |
 | --- | --- | --- | --- | --- |
@@ -536,7 +537,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9195 | MERGED | `d1ba7ee67781` | fix(relay): deliver multi-node fan-out concurrently and never drop silently | **skip**：拒收：新增行超過 400 字元（ARCHITECTURE.md, Justfile），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
 | #9196 | MERGED | `d9b63b2e3eda` | fix(cli): clearer desktop pairing errors, paired default relay, and auth desktop list | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9197 | MERGED | `e3e8ccf5a8eb` | perf(db): bound since-limited events reads with the month-floor literal | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
-| #9198 | OPEN | `bae11caf0b3d` | fix(media): run thumbnail regeneration tests in CI and cap rebuild pixels | **defer**：OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
+| #9198 | OPEN | `bae11caf0b3d` | fix(media): run thumbnail regeneration tests in CI and cap rebuild pixels | **defer**：OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard |
 | #9199 | MERGED | `85d3a2858c59` | perf(relay): serve restriction rows for 10 s with cross-pod invalidation | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9200 | MERGED | `6aea653362d2` | fix(db): keep retained fence proofs when a probe fails | **defer**：已合併，內容經 commit 軸抵達；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9202 | OPEN | `ac4fa22db5d2` | fix(cli): treat a retried sidebar write the relay already stored as success | **defer**：OPEN，head 釘在 ac4fa22db5d2，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
@@ -557,7 +558,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9224 | MERGED | `4ebb7554c6d4` | feat(mobile): one Builderlab per build, internal and public distributions | **skip**：拒收：新增行超過 400 字元（docs/adr/0001-internal-and-public-mobile-builds.md），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
 | #9225 | MERGED | `e98c10922038` | fix(mobile): request hosted relay assertions only when NIP-FI is required | **defer**：已合併，內容經 commit 軸抵達；行動端變更，需 iOS／Android 原生驗收環境 |
 | #9226 | MERGED | `c630c4ebf0b2` | fix(cli): preserve attachments across successive edits | **skip**：拒收：新增行超過 400 字元（crates/buzz-db/src/store/media.rs），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
-| #9227 | OPEN | `8d3d43bf1847` | feat(workflow): add owner-only agent mentions for workflow messages | **defer**：OPEN，head 釘在 8d3d43bf1847，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 持有修補的檔案（Cargo.lock），同步時衝突以上游為準再重做修補；草稿／WIP |
+| #9227 | OPEN | `a9f0559f9873` | feat(workflow): add owner-only agent mentions for workflow messages | **defer**：OPEN，head 釘在 a9f0559f9873，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 持有修補的檔案（Cargo.lock），同步時衝突以上游為準再重做修補；草稿／WIP |
 | #9228 | MERGED | `d5a9ecf8b8e7` | fix(ios): mint hosted NIP-FI assertions in the notification extension | **defer**：已合併，內容經 commit 軸抵達；行動端變更，需 iOS／Android 原生驗收環境 |
 | #9229 | OPEN | `f4dc6ddf3d02` | fix(relay): apply ingest's content checks to workflow SendMessage | **defer**：OPEN，head 釘在 f4dc6ddf3d02，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；草稿／WIP |
 | #9230 | OPEN | `88d76f7f1d94` | fix(relay): saturate filter limits instead of casting | **defer**：OPEN，head 釘在 88d76f7f1d94，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
@@ -604,7 +605,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9275 | MERGED | `01c224e68ff4` | test(ios): wait for a key, foreground-active window before presenting in RunnerTests | **defer**：已合併，內容經 commit 軸抵達；行動端變更，需 iOS／Android 原生驗收環境 |
 | #9276 | OPEN | `53192ba1443d` | fix(desktop): start the message target highlight when the row is on screen | **defer**：OPEN，head 釘在 53192ba1443d，合併後走 commit 軸；桌面端（Tauri／Windows）變更，需實機驗收 |
 | #9277 | MERGED | `0737d665bc16` | test(desktop): wait on real readiness signals in audience and community-rail specs | **defer**：已合併，內容經 commit 軸抵達；桌面端（Tauri／Windows）變更，需實機驗收 |
-| #9278 | OPEN | `5fb1e10d1f36` | [buzz] Log minimal APNs rejection diagnostics without personal data | **defer**：OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；草稿／WIP |
+| #9278 | OPEN | `5fb1e10d1f36` | [buzz] Log minimal APNs rejection diagnostics without personal data | **defer**：OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard；草稿／WIP |
 | #9279 | CLOSED | `782b6b26d235` | fix(relay): distinguish unavailable tenant lookups from missing hosts | **skip**：closed 未合併，上游未收；標題與檔案清單看不出 Windows／CJK 專屬缺陷，不採用 |
 | #9280 | OPEN | `598acbf040a6` | fix(github): pin API version 2026-03-10 for the Buzz releases lookup | **defer**：OPEN，head 釘在 598acbf040a6，合併後走 commit 軸；web 前端變更，需瀏覽器與部署驗收 |
 | #9281 | OPEN | `1138ace5605c` | ci: prevent Codex review hangs from retained log streams | **defer**：OPEN，head 釘在 1138ace5605c，合併後走 commit 軸；CI workflow 變更，未動 fork 修補的檔案；fork 的 main CI 沒有紅燈觸發採用；草稿／WIP |
@@ -613,7 +614,7 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9284 | OPEN | `15ff7d888139` | feat(mobile): sync Builderlab known communities across devices | **defer**：OPEN，head 釘在 15ff7d888139，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境；草稿／WIP |
 | #9285 | OPEN | `c95758507e65` | feat(relay): index reactions under their target author for #p reads | **defer**：OPEN，head 釘在 c95758507e65，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收 |
 | #9286 | MERGED | `d35a9a08c56c` | fix(mobile): show observed thread replies in Activity | **defer**：已合併，內容經 commit 軸抵達；行動端變更，需 iOS／Android 原生驗收環境 |
-| #9287 | MERGED | `1013c30aff99` | fix: unblock image audit with patched MCP SDK | **defer**：已合併，內容經 commit 軸抵達；依賴鎖檔／政策變更，fork 的鎖檔升級與 deny.toml 修補須在同步時重做 |
+| #9287 | MERGED | `1013c30aff99` | fix: unblock image audit with patched MCP SDK | **adopt**：同 commit 軸 `658253009c51`：因 rmcp 安全公告與 deny.toml ignore 採用，見 DECISIONS.md 2026-11-10 條目 |
 | #9288 | MERGED | `23d7c713395a` | feat(ci): allow admin dispatch of desktop candidate validation | **defer**：已合併，內容經 commit 軸抵達；CI workflow 變更，未動 fork 修補的檔案；fork 的 main CI 沒有紅燈觸發採用 |
 | #9289 | MERGED | `d6d3295eb95f` | perf(mobile): reuse the owned agent directory for Codex voice | **defer**：已合併，但合進非 main 分支（mobile-codex-huddle-20261108），內容不一定經 commit 軸抵達 main；行動端變更，需 iOS／Android 原生驗收環境 |
 | #9290 | OPEN | `b98dcc063037` | docs(vision): add information flow vision for agents | **skip**：拒收：新增行超過 400 字元（NOSTR.md, VISION_INFORMATION_FLOW.md），命中 UPSTREAM.md 的拒收規則（取目前 head 掃描）；不自行豁免 |
@@ -636,7 +637,8 @@ commit：gh api repos/block/buzz/commits/<SHA> 的 diff；PR：pulls/<n> metadat
 | #9308 | OPEN | `abb803103ffd` | fix(relay): bound invite preview host lookup | **defer**：OPEN，head 釘在 abb803103ffd，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；草稿／WIP |
 | #9309 | MERGED | `228ecee91c46` | fix(mobile): bump Flutter to 3.47.9 for Android TLS fix | **defer**：已合併，內容經 commit 軸抵達；腳本／工具變更，隨產品同步一併帶入 |
 | #9310 | MERGED | `24dd2bc7582a` | ci(docker): skip relay image publishes for main pushes outside the build context | **defer**：已合併，內容經 commit 軸抵達；CI workflow 變更，與 fork 的 workflow 修補（.github/workflows/docker.yml）衝突，同步時一併重做 |
-| #9311 | OPEN | `a5fc23be5fc9` | fix(mobile): list known people in recipient pickers before a name is typed | **defer**：OPEN，head 釘在 a5fc23be5fc9，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境；草稿／WIP |
+| #9311 | OPEN | `eccaa2379a63` | fix(mobile): list known people in recipient pickers before a name is typed | **defer**：OPEN，head 釘在 eccaa2379a63，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境；草稿／WIP |
+| #9312 | OPEN | `b0bd36811ab0` | feat(relay): persist solo fork provenance on creation | **defer**：OPEN，head 釘在 b0bd36811ab0，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；草稿／WIP |
 
 ## Issue 軸（25 筆）
 

@@ -14,15 +14,15 @@
  },
  "watermarks": {
   "reviewed_through": "44b3c4823f0cf1f7715f85dbf5566cb64e848162",
-  "reviewed_pr_through": 9311,
+  "reviewed_pr_through": 9312,
   "reviewed_issue_through": 9299
  },
  "counts": {
-  "c-defer": 205,
-  "c-adopt": 1,
+  "c-defer": 204,
+  "c-adopt": 2,
   "c-skip": 32,
   "p-defer": 283,
-  "p-adopt": 1,
+  "p-adopt": 2,
   "p-skip": 75,
   "i-defer": 11,
   "i-skip": 14,
@@ -4318,8 +4318,8 @@
     "deny.toml"
    ],
    "hits": {},
-   "verdict": "defer",
-   "reason": "依賴鎖檔／政策變更，fork 的鎖檔升級與 deny.toml 修補須在同步時重做；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」"
+   "verdict": "adopt",
+   "reason": "因 rmcp 3.4.1 的安全公告（RUSTSEC-2026-0462 等）與 deny.toml 的 0459／0462 ignore 採用：以 `cherry-pick -x` 帶入，Cargo.lock 衝突時保留 fork 的鎖檔升級、只把 rmcp 與 rmcp-macros 升到 3.9.0，deny.toml 保留 fork 的 RUSTSEC-2026-0253 ignore；詳見 DECISIONS.md 2026-11-10 條目"
   },
   {
    "sha": "3071279cd8636a4be9a0f7e16182e2391f4d4347",
@@ -4616,7 +4616,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "新增發佈映像的 workflow `docker-manual.yml`（手動觸發）；fork 的發布 guard 規則要求非 `block` owner 不得 push 映像，同步時須先補 owner guard 並讓 tests/fork 的發佈 job 檢查通過；fork 的 main CI 沒有紅燈觸發採用；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」"
+   "reason": "只新增 `.github/workflows/docker-manual.yml`（手動觸發、發佈映像），不動 `docker.yml`；fork 的發布 guard 規則要求非 `block` owner 不得 push 映像，同步時須先補 owner guard 並讓 tests/fork 的發佈 job 檢查通過，否則該檢查會紅；依既有「不自行分岔產品」政策不帶入，列入 ROADMAP「同步延後變更」"
   },
   {
    "sha": "e8a4bc15917e61dc0b8066e24c026dc6f3e7ce36",
@@ -11615,7 +11615,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收"
+   "reason": "OPEN，head 釘在 bae11caf0b3d，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard"
   },
   {
    "number": 9199,
@@ -12161,12 +12161,12 @@
    "title": "feat(workflow): add owner-only agent mentions for workflow messages",
    "state": "OPEN",
    "merged": false,
-   "base": "e8a4bc15917e61dc0b8066e24c026dc6f3e7ce36",
-   "head": "8d3d43bf1847e87686ed4accbd3104acbb19d353",
+   "base": "44b3c4823f0cf1f7715f85dbf5566cb64e848162",
+   "head": "a9f0559f9873fed6604ed17c4e17321b735973ad",
    "changed_files": 24,
    "diff_files": 24,
-   "sha256": "2a17efa283240d8dd1ffc6d8d60d561d6ef5ef985059e1d21da42e66acec91d5",
-   "bytes": 92150,
+   "sha256": "0f75473392ef7ccc62aedf90eaec3785468bcf056ca0ae274fe591ffe781af9c",
+   "bytes": 99453,
    "files": [
     ".env.example",
     "Cargo.lock",
@@ -12195,7 +12195,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 8d3d43bf1847，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 持有修補的檔案（Cargo.lock），同步時衝突以上游為準再重做修補；草稿／WIP"
+   "reason": "OPEN，head 釘在 a9f0559f9873，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；同時動到 fork 持有修補的檔案（Cargo.lock），同步時衝突以上游為準再重做修補；草稿／WIP"
   },
   {
    "number": 9228,
@@ -13379,7 +13379,7 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；草稿／WIP"
+   "reason": "OPEN，head 釘在 5fb1e10d1f36，合併後走 commit 軸；腳本／工具變更，隨產品同步一併帶入；同時動到 fork 修補的 workflow（.github/workflows/_ci-relay.yml），同步時重做 owner guard；草稿／WIP"
   },
   {
    "number": 9279,
@@ -13616,8 +13616,8 @@
     "deny.toml"
    ],
    "hits": {},
-   "verdict": "defer",
-   "reason": "已合併，內容經 commit 軸抵達；依賴鎖檔／政策變更，fork 的鎖檔升級與 deny.toml 修補須在同步時重做"
+   "verdict": "adopt",
+   "reason": "同 commit 軸 `658253009c51`：因 rmcp 安全公告與 deny.toml ignore 採用，見 DECISIONS.md 2026-11-10 條目"
   },
   {
    "number": 9288,
@@ -14142,11 +14142,11 @@
    "state": "OPEN",
    "merged": false,
    "base": "3e9d2e90ce87243a7c5de473ac6326a92aedaa32",
-   "head": "a5fc23be5fc9b230abefd9c93534fdc3a612347c",
+   "head": "eccaa2379a635f6beb42493ddb70b5f948be7409",
    "changed_files": 4,
    "diff_files": 4,
-   "sha256": "40b7b23f99a2d6e82984f3dc4b63127ab74345029dfe4fdca9a29a79ec7e18f8",
-   "bytes": 12492,
+   "sha256": "73fa02940539fc4ea9cebf9401d09454700a59d652b8b2e6d282bf0c344c9276",
+   "bytes": 18730,
    "files": [
     "mobile/lib/features/channels/add_members_sheet.dart",
     "mobile/lib/features/channels/channels_page/sheets.dart",
@@ -14155,7 +14155,41 @@
    ],
    "hits": {},
    "verdict": "defer",
-   "reason": "OPEN，head 釘在 a5fc23be5fc9，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境；草稿／WIP"
+   "reason": "OPEN，head 釘在 eccaa2379a63，合併後走 commit 軸；行動端變更，需 iOS／Android 原生驗收環境；草稿／WIP"
+  },
+  {
+   "number": 9312,
+   "title": "feat(relay): persist solo fork provenance on creation",
+   "state": "OPEN",
+   "merged": false,
+   "base": "44b3c4823f0cf1f7715f85dbf5566cb64e848162",
+   "head": "b0bd36811ab032672836fecae7610eeff2f422b5",
+   "changed_files": 17,
+   "diff_files": 17,
+   "sha256": "555c3e44358aebc6f3ec2dc81b334a0efead6a03c434d0789f722fb8e1eeee8a",
+   "bytes": 43995,
+   "files": [
+    "NOSTR.md",
+    "crates/buzz-core/src/channel.rs",
+    "crates/buzz-db/src/runtime/migration.rs",
+    "crates/buzz-db/src/store/channel.rs",
+    "crates/buzz-db/src/store/channel_members.rs",
+    "crates/buzz-db/src/store/dm.rs",
+    "crates/buzz-db/src/store/event_hydration/postgres_tests.rs",
+    "crates/buzz-db/src/store/unlisted_channels_postgres_tests.rs",
+    "crates/buzz-relay/src/handlers/create_with_members_postgres_tests.rs",
+    "crates/buzz-relay/src/handlers/ingest.rs",
+    "crates/buzz-relay/src/handlers/side_effects.rs",
+    "crates/buzz-relay/src/nip11.rs",
+    "docs/nips/NIP-CL.md",
+    "migrations/0087_solo_fork.sql",
+    "migrations/0088_solo_fork_constraint.sql",
+    "schema/tables/public/channels.sql",
+    "scripts/reconcile-schema-after-pgschema.sql"
+   ],
+   "hits": {},
+   "verdict": "defer",
+   "reason": "OPEN，head 釘在 b0bd36811ab0，合併後走 commit 軸；relay／資料庫／部署變更，需 Postgres 雙模式與 relay 驗收；草稿／WIP"
   }
  ],
  "issues": [
