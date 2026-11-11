@@ -6,7 +6,8 @@
 # Licenses are not checked here: the root deny.toml carries the allow-list and clarifications.
 # The check runs with --all-features: mesh-llm is an optional feature, and the canary build
 # enables it, so crates behind it (rmcp 3.9.0, zip 8, mesh-llm-*) must be covered too.
-#   cargo deny --manifest-path desktop/src-tauri/Cargo.toml --all-features #              --config desktop/src-tauri/deny.toml check advisories bans sources
+#   cargo deny --manifest-path desktop/src-tauri/Cargo.toml --all-features \
+#              --config desktop/src-tauri/deny.toml check advisories bans sources
 # Every ignore mirrors a root deny.toml ignore (same reason) unless it says otherwise.
 [advisories]
 ignore = [
@@ -26,16 +27,21 @@ ignore = [
     { id = "RUSTSEC-2026-0459", reason = "libsqlite3-sys 0.38.2; app-private databases only (archive/retention/cache, WAL on), no imported database+WAL; rusqlite ^0.40 shared with mesh-llm-log-store; exit when mesh-llm moves to rusqlite 0.41" },
     # zip: 4.6.1 comes from tauri-plugin-updater 2.10.1 (extracts, but only after the downloaded
     # bundle's minisign signature is verified against the key embedded in the app, so the archive
-    # content is controlled by the publisher); 8.6.0 comes from mesh-llm-* (manual entry copy,
-    # never ZipArchive::extract). buzz-desktop itself uses zip 9.0.5.
-    # Exit: tauri-plugin-updater moves off zip 4; mesh-llm ships Mesh-LLM/mesh-llm#2471.
-    { id = "RUSTSEC-2026-0367", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
-    { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
-    { id = "RUSTSEC-2026-0369", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
-    { id = "RUSTSEC-2026-0429", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
+    # content is controlled by the publisher); 8.6.0 comes from mesh-llm-* (entries copied one by one,
+    # no permission or symlink restore, never ZipArchive::extract). buzz-desktop itself uses zip 9.0.5.
+    # Exit: tauri-plugin-updater 2.14.1 (moves off zip 4) needs tauri ^2.12 while the lock has
+    # tauri 2.11.5, so take the tauri bump first; mesh-llm ships Mesh-LLM/mesh-llm#2471.
+    { id = "RUSTSEC-2026-0367", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
+    { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
+    { id = "RUSTSEC-2026-0369", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
+    { id = "RUSTSEC-2026-0429", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
     # quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media: responses from our own S3 endpoint.
-    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media; trusted S3 responses only; no patched release reachable yet" },
-    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media; trusted S3 responses only; no patched release reachable yet" },
+    # Patched quick-xml >= 0.41.0 exists, but rust-s3 0.38.0 (quick-xml ^0.41) needs aws-creds 0.40
+    # and the root Cargo.toml [patch.crates-io] pins aws-creds to a fork of 0.39.1 (EKS Pod Identity
+    # credentials, durch/rust-s3#449). Exit: re-base or drop that pin, then rust-s3 0.38 and
+    # buzz-media quick-xml 0.41 (root deny.toml has the same entry).
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38.4 via rust-s3 0.37/aws-creds/buzz-media; trusted S3 responses only; patched 0.41 blocked by the root aws-creds fork pin (rust-s3 0.38 needs aws-creds 0.40)" },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38.4 via rust-s3 0.37/aws-creds/buzz-media; trusted S3 responses only; patched 0.41 blocked by the root aws-creds fork pin (rust-s3 0.38 needs aws-creds 0.40)" },
     # ringbuf 0.3.3 is declared but never used by exactly pinned neteq 0.8.3 (see root deny.toml).
     { id = "RUSTSEC-2026-0293", reason = "unused dependency of audited, exactly pinned neteq 0.8.3; other consumers forbidden by bans.deny" },
     # Unmaintained, not vulnerable (all transitive; same entries as the root file where present).

@@ -209,10 +209,6 @@
       "deferredLatest": "0.42.0",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
-    "rmcp": {
-      "deferredLatest": "3.9.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 3.9.0."
-    },
     "rodio": {
       "deferredLatest": "0.23.0",
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
