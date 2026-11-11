@@ -442,3 +442,5 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - 測試：`test_desktop_workspace_has_its_own_dependency_policy_that_ci_runs`（桌面政策存在、0459 帶 WAL 說明與 rusqlite 0.41 退出條件、workflow 真的跑它且帶 `--all-features`）、`test_root_sqlite_ignore_does_not_claim_to_cover_the_desktop_workspace`。
 - 驗證：`cargo deny --manifest-path desktop/src-tauri/Cargo.toml --all-features --config desktop/src-tauri/deny.toml check advisories bans sources` 為 `advisories ok, bans ok, sources ok`（預設 feature 也 ok）；`cargo metadata --locked`（桌面）通過；根目錄 `cargo deny check` 見該 commit 的驗證。沒有遠端 CI 結果，不宣稱 push 後這一步一定綠（hermit 內的 cargo-deny 版本與本機可能不同）。
 
+**B5（低）rmcp 宣告與鎖檔不一致。** `crates/buzz-dev-mcp/Cargo.toml` 的下限仍是 `3.4.1`（鎖檔已是 3.9.0），別人只靠宣告 resolve 會拿到有公告的版本；根 `[workspace.dependencies]` 的 `rmcp = "1.1.0"` 沒有任何成員用 `workspace = true` 繼承（`grep` 全部 `Cargo.toml` 確認；11-08 條目也記過「沒有任何 crate 繼承」），卻讓人以為 workspace 仍在 rmcp 1。修法：下限改 `3.9.0`，移除根的死宣告。鎖檔不變（`Cargo.lock` 不存宣告下限）；`cargo metadata --locked`（根與桌面）、`cargo check -p buzz-dev-mcp --locked`、`cargo deny check` 通過。這動了上游持有的 manifest，是對 10-26「manifest 宣告不動」規則的明確例外，已登記 `FORK.md`；同步上游時以上游為準（上游若也升到 3.9.0 則內容相同）。
+
