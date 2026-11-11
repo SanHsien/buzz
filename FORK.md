@@ -34,7 +34,7 @@
 | `.github/workflows/sprig.yml` | 滾動 release 與 `sprig-v*` tag release 兩個發佈 job 都只在 `block` owner 執行 |
 | `.github/workflows/_ci-rust.yml` | 非 `block` owner 時 Windows Rust 逾時 45 → 90 分鐘（無暖快取） |
 | `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）一條帶影響評估與移除條件的 ignore（`RUSTSEC-2026-0387` 已由上游 `d676c7b` 的 p256 0.14 取代，ignore 移除） |
-| `Cargo.lock`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`benchmarks/harbor-buzz-orchestra/uv.lock`、`benchmarks/harbor-buzz-orchestra/testbed/uv.lock` | 相容的鎖檔升級（tokio、hickory、vite、tiptap、benchmark 的 Python 依賴等），**manifest 宣告不動**；清單見 `docs/fork/DECISIONS.md` |
+| `Cargo.lock`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`benchmarks/harbor-buzz-orchestra/uv.lock`、`benchmarks/harbor-buzz-orchestra/testbed/uv.lock` | 相容的鎖檔升級（tokio、hickory、vite、tiptap、benchmark 的 Python 依賴、桌面鎖的 rmcp 3.9.0 等），**manifest 宣告不動**；清單見 `docs/fork/DECISIONS.md` |
 | `crates/buzz-push-gateway/Cargo.toml`、`src/app_attest/{authenticator,certificate}.rs`、`src/app_attest_assertion_tests.rs`（含 `Cargo.lock` 的 p256 鏈） | 逐字帶入上游 `d676c7b`（p256 0.13 → 0.14，RUSTSEC-2026-0387）；不是 fork 自己的設計，下次合併上游時內容相同，不會衝突 |
 | `.github/workflows/_ci-clients.yml`、`deny.toml`、`Cargo.lock`（pulldown-cmark 0.13.6） | 逐字帶入上游 `c609d33e8`（#8711，Android lane 釘 JDK 17，ubuntu 26.04 預設 JDK 25）與 `c9b8f1176`（#8922，RUSTSEC-2026-0433／0429）；`cherry-pick -x` 保留出處，下次合併上游時內容相同，不會衝突 |
 | `desktop/src/features/messages/lib/useRichTextEditor.ts`、`desktop/scripts/tiptap-lock-alignment.test.mjs` | 相容 tiptap ≥ 3.23（`Editor.destroy()` 之後 `editor.commands` 會丟錯）：`clearContent`／`setContent`／`focusEnd`／`focusPreserve` 改走 `editor.chain().<cmd>().run()`（已銷毀時為 no-op）；測試核對鎖檔裡 `@tiptap/*` 同一版。原因與取捨見 `docs/fork/DECISIONS.md` 2026-11-08（再續）；上游若自己補了防護就丟掉 |

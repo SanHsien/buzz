@@ -427,3 +427,12 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **合進非 main 分支的 PR：** #9000、#9020、#9078、#9175、#9232、#9289、#9294 狀態 MERGED 但 base 是 `mobile-v0.27` 或功能分支，不視為已經 commit 軸抵達。
 
 OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水位：commit `44b3c4823f0cf1f7715f85dbf5566cb64e848162`、PR 9312、issue 9299。這只代表審查完成，不代表產品同步或告警解除。
+
+## 2026-11-11 獨立覆核補洞：rmcp／SQLite 只修了根 workspace（覆核發現）
+
+獨立覆核 11-10 採用 #9287（rmcp 3.9.0）後指出：升級與 `deny.toml` 的 ignore 理由都只對根 workspace 成立，`desktop/src-tauri`（獨立 workspace、自己的 `Cargo.lock`）沒跟上。五個缺口，各自一個 commit，以下逐條記。
+
+**B3（中）桌面鎖的 rmcp 3.2.0。** `mesh-llm-host-runtime`、`mesh-llm-plugin`（v0.76.2，`mesh-llm` feature 才進圖，canary 會開）帶進 rmcp 3.2.0，落在 RUSTSEC-2026-0462（<3.9.0）、0457（OAuth SSRF，2.0.0–3.7.0）、0461（3.0.0–3.6.0）範圍。修法：在 `desktop/src-tauri` 跑 `cargo update -p rmcp@3.2.0 --precise 3.9.0`，不動任何 manifest 與 git 依賴（mesh-llm 的 rmcp 約束允許 3.9.0）。lock 變動：`rmcp`／`rmcp-macros` 3.2.0 → 3.9.0，新增 `process-wrap 10.0.1`（rmcp 3.9.0 的相依；舊的 9.1.0 仍被另一個 crate 使用），rmcp 另多 `libc`、`sha2 0.11.0` 兩條邊；`cargo update` 重新解析時順帶把 `windows-sys`／`windows`／`windows-core` 數條相依邊改指向鎖檔內已有的版本（與 11-10 根鎖的同類附帶變動相同，沒有新套件）。
+- 測試：`tests/fork` 新增 `test_tauri_lock_has_no_unpatched_rmcp_3_which_cargo_deny_never_checks`（桌面鎖任何 2.x 以上的 rmcp 必須 >= 3.9.0；1.8.0 由 buzz-agent 另案）與 `test_the_rmcp_lock_check_flags_the_release_the_review_found`（對舊鎖的 3.2.0 會報）。修前舊鎖回 `['3.2.0']`。
+- 驗證：`cargo metadata --locked` 通過；`cargo check --locked --features mesh-llm --keep-going`（桌面）編譯了 `rmcp 3.9.0`、`mesh-llm-plugin`、`mesh-llm-plugin-manager`、`mesh-llm-host-runtime`、`wmi`，唯二失敗是 `opusic-sys` 與 `buzz-desktop` 的 build script（本機沒有 `cmake`，同 10-30 紀錄），交給 CI 的 Desktop Tauri；這不是完整 Tauri 建置，不宣稱已綠。
+
