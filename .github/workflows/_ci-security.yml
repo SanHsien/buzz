@@ -27,6 +27,10 @@ jobs:
       - uses: cashapp/activate-hermit@cea9af7913204a965fd488637a8d1811bba2e616 # v1
       - name: Dependency policy
         run: cargo-deny check
+      # fork patch (SanHsien/buzz): desktop/src-tauri is a separate workspace with its own
+      # Cargo.lock that the root `cargo-deny check` never reads (docs/fork/DECISIONS.md, 2026-11-11).
+      - name: Dependency policy (desktop)
+        run: cargo-deny --manifest-path desktop/src-tauri/Cargo.toml --all-features --config desktop/src-tauri/deny.toml check advisories bans sources
 
 
   results:

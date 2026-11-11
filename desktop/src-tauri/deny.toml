@@ -1,0 +1,81 @@
+# fork patch (SanHsien/buzz): this file is the fork's own (docs/fork/DECISIONS.md, 2026-11-11).
+# `cargo deny check` in CI reads only the root workspace; desktop/src-tauri is a separate
+# workspace with its own Cargo.lock, so nothing scanned it. Run this config with
+#   cargo deny --manifest-path desktop/src-tauri/Cargo.toml \
+#              --config desktop/src-tauri/deny.toml check advisories bans sources
+# Licenses are not checked here: the root deny.toml carries the allow-list and clarifications.
+# The check runs with --all-features: mesh-llm is an optional feature, and the canary build
+# enables it, so crates behind it (rmcp 3.9.0, zip 8, mesh-llm-*) must be covered too.
+#   cargo deny --manifest-path desktop/src-tauri/Cargo.toml --all-features #              --config desktop/src-tauri/deny.toml check advisories bans sources
+# Every ignore mirrors a root deny.toml ignore (same reason) unless it says otherwise.
+[advisories]
+ignore = [
+    # libsqlite3-sys 0.38.2 bundles SQLite 3.53.2 (rusqlite 0.40.2, non-optional, so every
+    # desktop build has it; the root deny.toml reason "only mesh log store" does NOT hold here).
+    # The bug returns uninitialized page-cache memory when a process opens a database together
+    # with a sibling -wal whose page size differs, so it needs a database + -wal pair written by
+    # someone else. Every database the app opens through rusqlite lives in the app's own
+    # data/nest directory (nest/archive/archive.db, the retention db, channel-head-cache.db,
+    # observed-unread db); archive/store.rs sets journal_mode=WAL on every connection, so the
+    # -wal path IS used, but none of these paths is user-chosen or imported. The one read of a
+    # foreign file is commands/legacy_storage.rs, which opens the app's own previous WebView
+    # localStorage database read-only.
+    # rusqlite is pinned ^0.40 so one libsqlite3-sys (links = "sqlite3") serves both the app and
+    # mesh-llm v0.76.2's mesh-llm-log-store (feature mesh-llm); taking rusqlite 0.41 (libsqlite3-sys
+    # 0.39, SQLite 3.54) alone would not link. Exit: mesh-llm moves to rusqlite 0.41, then bump both.
+    { id = "RUSTSEC-2026-0459", reason = "libsqlite3-sys 0.38.2; app-private databases only (archive/retention/cache, WAL on), no imported database+WAL; rusqlite ^0.40 shared with mesh-llm-log-store; exit when mesh-llm moves to rusqlite 0.41" },
+    # rmcp 1.8.0 is buzz-agent's subprocess client (client + transport-child-process); the
+    # affected Streamable HTTP client is not compiled (bans.features below). Exit: buzz-agent -> rmcp 3.
+    { id = "RUSTSEC-2026-0462", reason = "rmcp 1.8.0 only in buzz-agent's subprocess client; HTTP transport features banned below; rmcp 3 copies are 3.9.0" },
+    # zip: 4.6.1 comes from tauri-plugin-updater 2.10.1 (extracts, but only after the downloaded
+    # bundle's minisign signature is verified against the key embedded in the app, so the archive
+    # content is controlled by the publisher); 8.6.0 comes from mesh-llm-* (manual entry copy,
+    # never ZipArchive::extract). buzz-desktop itself uses zip 9.0.5.
+    # Exit: tauri-plugin-updater moves off zip 4; mesh-llm ships Mesh-LLM/mesh-llm#2471.
+    { id = "RUSTSEC-2026-0367", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
+    { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
+    { id = "RUSTSEC-2026-0369", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
+    { id = "RUSTSEC-2026-0429", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (manual copy, never extracts)" },
+    # quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media: responses from our own S3 endpoint.
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media; trusted S3 responses only; no patched release reachable yet" },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media; trusted S3 responses only; no patched release reachable yet" },
+    # ringbuf 0.3.3 is declared but never used by exactly pinned neteq 0.8.3 (see root deny.toml).
+    { id = "RUSTSEC-2026-0293", reason = "unused dependency of audited, exactly pinned neteq 0.8.3; other consumers forbidden by bans.deny" },
+    # Unmaintained, not vulnerable (all transitive; same entries as the root file where present).
+    { id = "RUSTSEC-2024-0384", reason = "instant via nostr; unmaintained, no upstream fix" },
+    { id = "RUSTSEC-2024-0436", reason = "paste via netlink-packet-core / tokenizers; unmaintained, no safe upgrade" },
+    { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml via serde_yaml; unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant via zbus; unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names via zbus; unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive via zbus; unmaintained, not vulnerable" },
+    # Desktop-only unmaintained entries (not in the root file); first recorded 2026-10-30.
+    { id = "RUSTSEC-2020-0168", reason = "mach via CoreFoundation-sys / IOKit-sys / user-idle; unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error via glib-macros / gtk3-macros (Tauri Linux stack); unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range via urlpattern (Tauri); unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-common via urlpattern (Tauri); unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property via urlpattern (Tauri); unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version via urlpattern (Tauri); unmaintained, not vulnerable" },
+    { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident via urlpattern (Tauri); unmaintained, not vulnerable" },
+]
+
+[bans]
+multiple-versions = "allow"
+wildcards = "allow"
+deny = [
+    { name = "rmcp", version = "<3.9.0", wrappers = ["buzz-agent"], reason = "only buzz-agent's subprocess-only rmcp 1 client may use an older version; mesh-llm and every other consumer must use patched rmcp" },
+    { name = "rusqlite", version = "<0.41", wrappers = ["buzz-desktop", "mesh-llm-log-store"], reason = "older SQLite is limited to the app's own databases and mesh-llm's log store" },
+    { name = "libsqlite3-sys", version = "<0.39", wrappers = ["rusqlite"], reason = "older SQLite is limited to the guarded rusqlite dependency" },
+    { name = "ringbuf", version = "<0.5.2", wrappers = ["neteq"], reason = "only audited NetEQ may declare this unused vulnerable dependency" },
+]
+
+# The rmcp 1 advisory exception is valid only without HTTP transports.
+[[bans.features]]
+name = "rmcp"
+version = "<3.9.0"
+allow = ["client", "transport-child-process", "transport-async-rw"]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = ["https://github.com/Mesh-LLM/mesh-llm.git"]

@@ -1,11 +1,14 @@
 [advisories]
 ignore = [
     # SQLite's crafted database/WAL disclosure requires opening files supplied
-    # by an attacker. In this workspace SQLite is only mesh-llm-log-store's
+    # by an attacker. In THIS (root) workspace SQLite is only mesh-llm-log-store's
     # private local log database, through the examples-only buzz-mesh-smoke
     # dev-dependencies; it is not linked into the relay. mesh-llm v0.76.2
     # requires rusqlite ^0.40, so libsqlite3-sys 0.39 is not yet selectable.
     # Remove when mesh-llm moves to rusqlite 0.41; bans below fence this path.
+    # This reason does not extend to desktop/src-tauri, where rusqlite is a direct,
+    # non-optional dependency (the app's own WAL databases); it has its own
+    # desktop/src-tauri/deny.toml with its own reason.
     { id = "RUSTSEC-2026-0459", reason = "mesh smoke harness private local log database only; no untrusted database/WAL import; upstream rusqlite ^0.40 prevents patched SQLite" },
     # rmcp 1.8 is used only by buzz-agent, with default-features=false and
     # client + transport-child-process. Neither affected HTTP client transport

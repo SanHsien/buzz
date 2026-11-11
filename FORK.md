@@ -33,7 +33,8 @@
 | `.github/workflows/docker.yml`、`.github/workflows/sprig-image.yml` | 非 `block` owner 只 build、不 push（映像名固定在 `ghcr.io/block/*`） |
 | `.github/workflows/sprig.yml` | 滾動 release 與 `sprig-v*` tag release 兩個發佈 job 都只在 `block` owner 執行 |
 | `.github/workflows/_ci-rust.yml` | 非 `block` owner 時 Windows Rust 逾時 45 → 90 分鐘（無暖快取） |
-| `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）一條帶影響評估與移除條件的 ignore（`RUSTSEC-2026-0387` 已由上游 `d676c7b` 的 p256 0.14 取代，ignore 移除） |
+| `deny.toml` | `RUSTSEC-2026-0253`（lru 0.16.4）一條帶影響評估與移除條件的 ignore（`RUSTSEC-2026-0387` 已由上游 `d676c7b` 的 p256 0.14 取代，ignore 移除）；`RUSTSEC-2026-0459` 的註解加註「只對根 workspace 成立」 |
+| `.github/workflows/_ci-security.yml`、`desktop/src-tauri/deny.toml`（fork 新增） | 根目錄 `cargo-deny check` 不讀 `desktop/src-tauri`（獨立 workspace 與鎖檔）；加一步以桌面自己的 `deny.toml`、`--all-features` 檢查 advisories／bans／sources，RUSTSEC-2026-0459 等例外各帶理由與退出條件（2026-11-11 獨立覆核發現）。根目錄 `deny.toml` 的 0459 註解改為只對根 workspace 成立 |
 | `Cargo.lock`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`benchmarks/harbor-buzz-orchestra/uv.lock`、`benchmarks/harbor-buzz-orchestra/testbed/uv.lock` | 相容的鎖檔升級（tokio、hickory、vite、tiptap、benchmark 的 Python 依賴、桌面鎖的 rmcp 3.9.0 等），**manifest 宣告不動**；清單見 `docs/fork/DECISIONS.md` |
 | `crates/buzz-push-gateway/Cargo.toml`、`src/app_attest/{authenticator,certificate}.rs`、`src/app_attest_assertion_tests.rs`（含 `Cargo.lock` 的 p256 鏈） | 逐字帶入上游 `d676c7b`（p256 0.13 → 0.14，RUSTSEC-2026-0387）；不是 fork 自己的設計，下次合併上游時內容相同，不會衝突 |
 | `.github/workflows/_ci-clients.yml`、`deny.toml`、`Cargo.lock`（pulldown-cmark 0.13.6） | 逐字帶入上游 `c609d33e8`（#8711，Android lane 釘 JDK 17，ubuntu 26.04 預設 JDK 25）與 `c9b8f1176`（#8922，RUSTSEC-2026-0433／0429）；`cherry-pick -x` 保留出處，下次合併上游時內容相同，不會衝突 |

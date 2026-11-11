@@ -392,6 +392,29 @@ def test_the_rmcp_lock_check_flags_the_release_the_review_found() -> None:
     assert not _rmcp_3_releases_below_patched(lock("1.8.0", "3.9.0"))
 
 
+def test_desktop_workspace_has_its_own_dependency_policy_that_ci_runs() -> None:
+    """Found by the 2026-11-11 independent review: the root `cargo-deny check` never reads
+    desktop/src-tauri (its own workspace and lock), where libsqlite3-sys 0.38.2 is linked in every
+    build. The desktop policy must exist, carry a reasoned exception with an exit condition for
+    RUSTSEC-2026-0459, and be run by the security workflow with --all-features (mesh-llm)."""
+    policy = (REPO_ROOT / "desktop/src-tauri/deny.toml").read_text(encoding="utf-8")
+    assert FORK_PATCH_MARKER in policy
+    reason_at = policy.index('id = "RUSTSEC-2026-0459"')
+    assert "rusqlite 0.41" in policy[reason_at:]
+    assert "WAL" in policy[:reason_at], "the reason has to say whether the app's databases use WAL"
+    workflow = (WORKFLOWS / "_ci-security.yml").read_text(encoding="utf-8")
+    assert "--manifest-path desktop/src-tauri/Cargo.toml" in workflow
+    assert "--config desktop/src-tauri/deny.toml" in workflow
+    assert "--all-features" in workflow
+
+
+def test_root_sqlite_ignore_does_not_claim_to_cover_the_desktop_workspace() -> None:
+    root = (REPO_ROOT / "deny.toml").read_text(encoding="utf-8")
+    reason_at = root.index('id = "RUSTSEC-2026-0459"')
+    comment = root[root.rindex("    # SQLite's crafted", 0, reason_at):reason_at]
+    assert "desktop/src-tauri" in comment and "root" in comment
+
+
 def test_a_floating_tag_with_a_prose_comment_keeps_its_floor() -> None:
     """`@v6 # pinned for X`: the comment is not a version, so the floor comes from the ref."""
     [row] = fresh.parse_workflow_actions(
