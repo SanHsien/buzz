@@ -362,25 +362,23 @@ def test_tauri_lock_carries_the_patched_releases_cargo_deny_never_checks() -> No
     assert not behind, f"Tauri Cargo.lock below the patched release: {behind}"
 
 
-def _rmcp_3_releases_below_patched(lock_text: str) -> list[str]:
-    """rmcp 1.x is fenced separately (buzz-agent, subprocess client only); every 2.x+ copy has
-    to be at the patched 3.9.0 (RUSTSEC-2026-0457 / 0461 / 0462)."""
+def _rmcp_releases_below_patched(lock_text: str) -> list[str]:
+    """Every rmcp copy has to be the patched 3.9.0 or newer (RUSTSEC-2026-0457 / 0461 / 0462).
+    buzz-agent's rmcp 1.8 used to be fenced by an ignore; its rmcp 3 migration removed that."""
     import tomllib
 
     packages = tomllib.loads(lock_text)["package"]
     versions = [p["version"] for p in packages if p["name"] == "rmcp"]
-    return [
-        v for v in versions
-        if (fresh.release_key(v) or ())[:1] >= (2,) and (fresh.release_key(v) or ()) < (3, 9, 0)
-    ]
+    return [v for v in versions if (fresh.release_key(v) or ()) < (3, 9, 0)]
 
 
-def test_tauri_lock_has_no_unpatched_rmcp_3_which_cargo_deny_never_checks() -> None:
+def test_no_lock_carries_an_unpatched_rmcp() -> None:
     """Found by the 2026-11-11 independent review: the root lock was moved to rmcp 3.9.0 but the
     desktop lock kept 3.2.0 (via mesh-llm-host-runtime / mesh-llm-plugin, built under the
     `mesh-llm` feature)."""
-    lock = (REPO_ROOT / "desktop/src-tauri/Cargo.lock").read_text(encoding="utf-8")
-    assert not _rmcp_3_releases_below_patched(lock)
+    for lock in ("Cargo.lock", "desktop/src-tauri/Cargo.lock"):
+        text = (REPO_ROOT / lock).read_text(encoding="utf-8")
+        assert not _rmcp_releases_below_patched(text), lock
 
 
 def test_the_rmcp_lock_check_flags_the_release_the_review_found() -> None:
@@ -388,8 +386,9 @@ def test_the_rmcp_lock_check_flags_the_release_the_review_found() -> None:
         rows = [f'[[package]]|name = "rmcp"|version = "{v}"' for v in versions]
         return chr(10).join(["version = 1", *rows]).replace("|", chr(10))
 
-    assert _rmcp_3_releases_below_patched(lock("3.2.0")) == ["3.2.0"]
-    assert not _rmcp_3_releases_below_patched(lock("1.8.0", "3.9.0"))
+    assert _rmcp_releases_below_patched(lock("3.2.0")) == ["3.2.0"]
+    assert _rmcp_releases_below_patched(lock("1.8.0", "3.9.0")) == ["1.8.0"]
+    assert not _rmcp_releases_below_patched(lock("3.9.0", "3.10.1"))
 
 
 def test_desktop_workspace_has_its_own_dependency_policy_that_ci_runs() -> None:

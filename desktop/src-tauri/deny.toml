@@ -24,9 +24,6 @@ ignore = [
     # mesh-llm v0.76.2's mesh-llm-log-store (feature mesh-llm); taking rusqlite 0.41 (libsqlite3-sys
     # 0.39, SQLite 3.54) alone would not link. Exit: mesh-llm moves to rusqlite 0.41, then bump both.
     { id = "RUSTSEC-2026-0459", reason = "libsqlite3-sys 0.38.2; app-private databases only (archive/retention/cache, WAL on), no imported database+WAL; rusqlite ^0.40 shared with mesh-llm-log-store; exit when mesh-llm moves to rusqlite 0.41" },
-    # rmcp 1.8.0 is buzz-agent's subprocess client (client + transport-child-process); the
-    # affected Streamable HTTP client is not compiled (bans.features below). Exit: buzz-agent -> rmcp 3.
-    { id = "RUSTSEC-2026-0462", reason = "rmcp 1.8.0 only in buzz-agent's subprocess client; HTTP transport features banned below; rmcp 3 copies are 3.9.0" },
     # zip: 4.6.1 comes from tauri-plugin-updater 2.10.1 (extracts, but only after the downloaded
     # bundle's minisign signature is verified against the key embedded in the app, so the archive
     # content is controlled by the publisher); 8.6.0 comes from mesh-llm-* (manual entry copy,
@@ -62,17 +59,11 @@ ignore = [
 multiple-versions = "allow"
 wildcards = "allow"
 deny = [
-    { name = "rmcp", version = "<3.9.0", wrappers = ["buzz-agent"], reason = "only buzz-agent's subprocess-only rmcp 1 client may use an older version; mesh-llm and every other consumer must use patched rmcp" },
+    { name = "rmcp", version = "<3.9.0", reason = "rmcp < 3.9.0 carries RUSTSEC-2026-0457/0461/0462; buzz-agent, mesh-llm and every other consumer must use the patched release" },
     { name = "rusqlite", version = "<0.41", wrappers = ["buzz-desktop", "mesh-llm-log-store"], reason = "older SQLite is limited to the app's own databases and mesh-llm's log store" },
     { name = "libsqlite3-sys", version = "<0.39", wrappers = ["rusqlite"], reason = "older SQLite is limited to the guarded rusqlite dependency" },
     { name = "ringbuf", version = "<0.5.2", wrappers = ["neteq"], reason = "only audited NetEQ may declare this unused vulnerable dependency" },
 ]
-
-# The rmcp 1 advisory exception is valid only without HTTP transports.
-[[bans.features]]
-name = "rmcp"
-version = "<3.9.0"
-allow = ["client", "transport-child-process", "transport-async-rw"]
 
 [sources]
 unknown-registry = "deny"
