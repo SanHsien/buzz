@@ -157,10 +157,17 @@ async fn mcp_init_timeout_kills_child() {
     h.shutdown().await;
 }
 
-/// A real MCP server that returns 200 tools with 100KB descriptions must
+/// A real MCP server that returns 200 tools with large descriptions must
 /// be capped: tool count ≤ MAX_TOOLS_PER_SESSION (128) — we expect spawn_all
 /// to either reject (too many) OR truncate. We assert the spawn succeeds with
 /// a bounded count, and that descriptions sent to the LLM are ≤ 1024 bytes.
+///
+/// The whole `tools/list` response must stay under rmcp 3's default 16 MiB
+/// line limit (`DEFAULT_MAX_LINE_LENGTH`). Above it the transport discards the
+/// line and the request hangs until the init timeout, so 200 × 100 KB (~20 MB)
+/// failed in CI on 2026-11-11 after the rmcp 1.8 -> 3.9 migration. 200 × 64 KB
+/// (~13 MB) keeps the response under the limit and still exceeds both caps.
+/// docs/fork/DECISIONS.md, 2026-11-13.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tool_metadata_caps_enforced() {
     let llm = spawn_capturing_llm(vec![openai_text("done")]).await;
@@ -183,7 +190,7 @@ async fn tool_metadata_caps_enforced() {
                 "args": [],
                 "env": [
                     { "name": "FAKE_MCP_TOOL_COUNT", "value": "200" },
-                    { "name": "FAKE_MCP_HUGE_DESC", "value": "1" },
+                    { "name": "FAKE_MCP_DESC_SIZE", "value": "65536" },
                 ],
             }],
         }),

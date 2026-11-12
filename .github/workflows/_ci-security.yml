@@ -29,8 +29,10 @@ jobs:
         run: cargo-deny check
       # fork patch (SanHsien/buzz): desktop/src-tauri is a separate workspace with its own
       # Cargo.lock that the root `cargo-deny check` never reads (docs/fork/DECISIONS.md, 2026-11-11).
+      # Run from that directory so cargo-deny picks up its deny.toml; `--config` is not used because
+      # the pinned cargo-deny (0.19) rejects it after the top-level flags (run 43032776077, 2026-11-11).
       - name: Dependency policy (desktop)
-        run: cargo-deny --manifest-path desktop/src-tauri/Cargo.toml --all-features --config desktop/src-tauri/deny.toml check advisories bans sources
+        run: cd desktop/src-tauri && cargo-deny --all-features check advisories bans sources
 
 
   results:

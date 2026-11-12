@@ -402,9 +402,10 @@ def test_desktop_workspace_has_its_own_dependency_policy_that_ci_runs() -> None:
     assert "rusqlite 0.41" in policy[reason_at:]
     assert "WAL" in policy[:reason_at], "the reason has to say whether the app's databases use WAL"
     workflow = (WORKFLOWS / "_ci-security.yml").read_text(encoding="utf-8")
-    assert "--manifest-path desktop/src-tauri/Cargo.toml" in workflow
-    assert "--config desktop/src-tauri/deny.toml" in workflow
-    assert "--all-features" in workflow
+    # Run from desktop/src-tauri so cargo-deny reads that deny.toml. Do not pass --config: the
+    # pinned cargo-deny rejects it after the top-level flags (run 43032776077 failed on exactly that).
+    assert "cd desktop/src-tauri && cargo-deny --all-features check advisories bans sources" in workflow
+    assert "--config" not in workflow.split("Dependency policy (desktop)", 1)[1].split("\n\n", 1)[0]
 
 
 def test_root_sqlite_ignore_does_not_claim_to_cover_the_desktop_workspace() -> None:

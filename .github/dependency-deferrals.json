@@ -2,8 +2,8 @@
   "_comment": "Reviewed-but-not-now decisions for tools/check_dependency_freshness.py. Each entry needs deferredLatest and reason; it expires by itself once the registry passes that release. A permanent policy belongs on the declaring line as `# freshness-hold:` instead.",
   "deferrals": {
     "@mediapipe/tasks-vision": {
-      "deferredLatest": "1.2.2",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 1.2.2."
+      "deferredLatest": "1.2.3",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 1.2.2. Re-reviewed 2026-11-13 at 1.2.3."
     },
     "@tauri-apps/api": {
       "deferredLatest": "2.12.4",
@@ -14,8 +14,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "@tauri-apps/plugin-opener": {
-      "deferredLatest": "2.7.2",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "2.7.3",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26. Re-reviewed 2026-11-13 at 2.7.3."
     },
     "@testing-library/jest-dom": {
       "deferredLatest": "7.0.1",
@@ -66,8 +66,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "azure/setup-helm": {
-      "deferredLatest": "5.0.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "5.1.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26. Re-reviewed 2026-11-13 at 5.1.0 (upstream-owned pin in helm-chart.yml)."
     },
     "base64": {
       "deferredLatest": "0.23.1",
@@ -150,8 +150,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "kube": {
-      "deferredLatest": "5.0.0",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 5.0.0."
+      "deferredLatest": "5.1.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 5.0.0. Re-reviewed 2026-11-13 at 5.1.0 (same kube 5 reasons: chrono to jiff, Error::Api boxed, rmcp and k8s-openapi feature changes)."
     },
     "launchdarkly-server-sdk": {
       "deferredLatest": "3.3.2",
@@ -166,8 +166,8 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "motion": {
-      "deferredLatest": "14.10.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 14.10.1."
+      "deferredLatest": "14.13.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26; re-reviewed 2026-11-07 at 14.10.1. Re-reviewed 2026-11-13 at 14.12.0. Re-reviewed 2026-11-13 at 14.13.0."
     },
     "neteq": {
       "deferredLatest": "0.9.1",
@@ -214,12 +214,12 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "rubato": {
-      "deferredLatest": "5.0.1",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "5.1.0",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26. Re-reviewed 2026-11-13 at 5.1.0."
     },
     "rusqlite": {
-      "deferredLatest": "0.41.1",
-      "reason": "Cannot resolve: rusqlite 0.41 needs libsqlite3-sys 0.39, which `links = \"sqlite3\"`, while the git dependency mesh-llm-log-store (tag v0.76.2, pulled in by mesh-llm-host-runtime in desktop/src-tauri) requires rusqlite ^0.40 / libsqlite3-sys ^0.38 and cargo allows one sqlite3 native link per graph (`cargo update` fails on 2026-11-07). Trigger: the mesh-llm tag pinned in desktop/src-tauri/Cargo.toml moves to a release that depends on rusqlite 0.41, or the registry passes 0.41.1."
+      "deferredLatest": "0.42.0",
+      "reason": "Cannot resolve: rusqlite 0.41 needs libsqlite3-sys 0.39, which `links = \"sqlite3\"`, while the git dependency mesh-llm-log-store (tag v0.76.2, pulled in by mesh-llm-host-runtime in desktop/src-tauri) requires rusqlite ^0.40 / libsqlite3-sys ^0.38 and cargo allows one sqlite3 native link per graph (`cargo update` fails on 2026-11-07). Trigger: the mesh-llm tag pinned in desktop/src-tauri/Cargo.toml moves to a release that depends on rusqlite 0.41, or the registry passes 0.42.0. Re-reviewed 2026-11-13: 0.42.0 is outside mesh-llm-log-store's ^0.40 as well, so the conflict stands."
     },
     "rust-s3": {
       "deferredLatest": "0.38.0",
@@ -242,12 +242,12 @@
       "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
     },
     "syn": {
-      "deferredLatest": "3.0.9",
-      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26."
+      "deferredLatest": "3.0.10",
+      "reason": "Product dependency declarations and workflow pins are upstream-owned and this fork carries no product changes (docs/fork/DECISIONS.md, 2026-10-26); floors move with upstream commits. Reviewed 2026-10-26. Re-reviewed 2026-11-13 at 3.0.10 (major bump; manifest declaration syn = 2 stays)."
     },
     "taiki-e/install-action": {
-      "deferredLatest": "2.90.2",
-      "reason": "Re-reviewed 2026-11-07 (latest 2.90.2); earlier re-review 2026-10-28 after the 2026-10-27 entry (2.87.32) expired on the next patch release (2.87.33, published 2026-10-28). Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 24a3706, now merged into the fork, still pins the same SHA; the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
+      "deferredLatest": "2.90.3",
+      "reason": "Re-reviewed 2026-11-13 (latest 2.90.3, was 2.90.2): the reasons that follow still hold; the six pins are upstream-owned. Re-reviewed 2026-11-07 (latest 2.90.2); earlier re-review 2026-10-28 after the 2026-10-27 entry (2.87.32) expired on the next patch release (2.87.33, published 2026-10-28). Not upgraded: the six pins (v2.79.15, in _ci-relay.yml, _ci-rust.yml, sprig.yml) are upstream-owned and upstream main 24a3706, now merged into the fork, still pins the same SHA; the exact tool versions the workflows request (cargo-nextest@0.9.136, cross@0.2.5) can only be exercised by the fork's own CI after a push. The action ships a patch every 2-5 days, so this entry will lapse again; each lapse is a re-ask, not a decision. Trigger: upstream bumps the pin (arrives with the next sync), or the fork starts owning its CI workflows."
     },
     "tokenizers": {
       "deferredLatest": "0.23.2",
