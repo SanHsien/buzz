@@ -465,3 +465,10 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 3. **Dependency freshness：`Dependency maintenance is required`，不是 nostr（nostr 0.45.7 仍 DEFERRED）。** 六列 `REVIEW UPDATE`：registry 已超過延後版本，或新列未登記：`@tauri-apps/plugin-opener` 2.7.2 → 2.7.3、`motion` 14.10.1 → 14.12.0、`rusqlite` 0.41.1 → 0.42.0、`syn` 3.0.9 → 3.0.10、`azure/setup-helm` 5.0.1 → 5.1.0、`taiki-e/install-action` 2.90.2 → 2.90.3。開著的 Dependabot PR 為 0。依 2026-10-26 規則（manifest 宣告與上游持有的 workflow pin 不升）重新延後，更新 `deferredLatest` 並重審理由，同 11-07 做法。這些升級都要改 manifest 或上游 pin，不是鎖檔相容更新，所以沒有升。`rusqlite` 的技術理由仍成立：mesh-llm tag v0.76.2 要求 `^0.40`，0.42 也在範圍外。
 4. **其餘紅燈是 infra，不是程式碼。** Desktop Tauri 三個 job 與 Desktop Smoke E2E 十個 job 的 apt 步驟對 `azure.archive.ubuntu.com` 的 `InRelease` 逾時（`Ign:`）；Desktop E2E Integration 的 `docker compose pull` 失敗。這些只能重跑。
 5. **B2 的「沒有遠端 CI 結果」註記已由上面第 2 項證偽**：該步驟在遠端紅燈，不是只有本機未驗。
+
+## 2026-11-17 一次性歷史壓縮（維護者 2026-11-16 授權）
+
+- **做了什麼**：`main` 由 3120 個 commit 壓成單一根提交 `94b61bea`（`python -m fleet_ops squash buzz`，repo-fleet-ops）。壓縮前後 tree 相同（`26fe64ec963c52847b720b62e83da7316bdec9f7`），產品內容零差異。先刪掉從上游帶來的 231 個 tag（名稱與 SHA 都與 `block/buzz` 相同才刪）與已合併 PR #6 的殘留 Dependabot 分支。
+- **為什麼**：維護者 2026-11-07 傾向壓縮仍與上游共用歷史的 fork；本線 forks 0、open PR 0、release 0，沒有會被打斷的下游。
+- **影響**：與上游不再有共同歷史，帶進上游改動只能 cherry-pick 或手動移植（`UPSTREAM.md` 已同步改寫）；上游追蹤照舊靠 `tools/upstream_baseline.json` 水位與 `upstream-check.yml`。舊歷史保存在維運長本機 clone 的 tag `pre-squash-history`（`9252ecfd5`，未推送）。
+- **CI 註記**：根提交在 push 事件上讓 `scripts/check-file-sizes-core.mjs` 取 `HEAD^1` 失敗（run `43975238369`，`fatal: Not a valid object name HEAD^1^{commit}`），其餘 job 連帶判紅、實際測試沒跑；同一個 tree 在壓縮前的 run `43330790260` 是綠的。這是上游腳本對「沒有父提交」的假設，本 commit 之後就有父提交，不改上游腳本。
