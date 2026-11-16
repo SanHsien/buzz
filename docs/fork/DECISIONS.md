@@ -1,0 +1,467 @@
+# Fork 決策紀錄
+
+## 2026-10-26 建立維護骨架
+
+- **水位起點**：fork 建立時上游 `main` 即 `9e8c9fc`（`ahead_by 0`）。commit 水位＝`9e8c9fc`；PR／issue 水位＝8592（建立當天上游最大編號）。
+- **刻意不做：水位以前的 issue 分流。** 上游約 3,682 個 open issue，逐筆分流沒有可驗證的產出。觸發條件：本 fork 開始改產品碼，或遇到具體缺陷時，針對該區域搜尋 `--state all`。
+- **追蹤模式用 commit，不用 release。** 上游 tag 有 `v*`、`desktop-v*`、`mobile-v*`、`chart-v*` 等多條線，semver 單線追不全；上游 main 約每週數十個 commit，仍可逐週審。
+- **README／AGENTS／CLAUDE 不改。** 這些是上游持有檔；翻轉成繁中會讓每次同步都衝突。fork 說明放 `FORK.md`。
+- **Dependabot 取代 Renovate。** 上游 `renovate.json` 依賴 Renovate 應用程式，fork 沒有安裝，不會運作；本 fork 用 Dependabot（cargo、npm、github-actions、docker、pub）。`renovate.json` 保留不動。
+- **依賴新鮮度只讀 npm、Cargo 與 workflow pins。** Pub（`mobile/pubspec.yaml`）、Gradle、SwiftPM、`benchmarks/` 的 pyproject 沒有對應讀取器；Dependabot 仍涵蓋 pub。觸發條件：這些宣告造成實際漏更時再加讀取器。
+- **CodeQL 語言：javascript-typescript、rust、actions、python（皆 build-mode none）。** Python 只有 `benchmarks/`、`scripts/`、`docs/formal` 與本 fork 的維護工具。 Kotlin 需完整 Android 建置、Swift 需 macOS runner，成本與訊號不成比例；觸發條件：行動端出現本 fork 自己的程式。
+- **不在 Windows 跑上游 CI。** 上游 Windows 只有 `windows-canary`（手動觸發）。
+
+## 2026-10-26 上游 PR 分流
+
+- **#8593**（`feat(media): accept audio-only AAC MP4 uploads as audio/mp4`）：draft、未合併，head `a8ec9398884d12c62c5b0a5e27f4547ca5f66597`，6 檔 +644/-54。本 fork 沒有分歧的媒體碼（`crates/buzz-media`、`buzz-relay` 與上游相同），不獨立引進。觸發條件：上游合併後經 commit 軸審查；PR 水位推進到 8593。
+
+## 2026-10-26 依賴新鮮度：為什麼延後而不是提高下限
+
+首次執行有 76 筆（72 個套件名）宣告落後（npm、Cargo、workflow pins）。這些宣告都在上游持有的產品檔與 workflow 裡，本 fork 沒有任何產品變更、也無法在本機建置驗證 Rust／桌面／行動端。提高下限＝改上游檔案、製造日後同步衝突，且不能消除「新鮮度紅燈」以外的任何風險。
+
+做法：全部寫進 `.github/dependency-deferrals.json`（附 `deferredLatest` 與理由），一旦 registry 超過該版本就重新追問；不調高任何宣告下限。`Swatinem/rust-cache@<sha>` 這類無版本下限的 pin 列為 NO FLOOR（不比較）。
+
+觸發條件：本 fork 開始自己維護產品依賴時，改為逐項升級而不是延後；或上游 Renovate 長期不動某個安全相關套件時，單獨處理。
+
+## 2026-10-26 上游 workflow 在 fork 上的行為
+
+`ci.yml` 對 `push main`／`pull_request` 沒有 `github.repository` 守衛，所以推送到本 fork 會跑完整的上游 CI（Rust、桌面、行動端、security），耗時長且部分步驟可能因缺 secrets 或 runner 而失敗；約 17 支其他 workflow 有守衛（docker、release、canary 等）會跳過。
+
+處理方式：首次推送後讀實際 check runs，把「缺 secrets 造成的紅燈」與「真壞」分開記在這裡（見下方「首次 CI 結果」，推送後補）；**不停用任何 workflow**、不改上游 workflow 檔（避免同步衝突）。必要檢查（branch protection）一律不設，除非確認它真的會回報。
+
+## 2026-10-26 安全告警
+
+Dependabot alerts 與自動安全更新在 fork 預設關閉（API 404／disabled）。有可掃的依賴宣告，所以已於首次推送時開啟；新鮮度延後清單不替代它們。
+
+## 2026-10-26 首次 CI 結果（推送 `2ab160a`）
+
+我們新增的 workflow（Fork tools、Upstream check、Dependency freshness、CodeQL）全綠；上游 `helm chart`、`Graph Update` 綠，`Codex Security Review` 依守衛略過。紅燈全部來自上游 workflow 在 fork 上的環境差異或新出現的弱點，**不是本次變更造成**（產品碼與上游相同，還原本次提交不會改變它們）：
+
+| workflow／job | 結果 | 判讀 | 處理 |
+| --- | --- | --- | --- |
+| CI／Security Domain（`cargo deny`） | 失敗 | 新公告 RUSTSEC-2026-0387：`crypto-bigint 0.5.5` 時間變異（建議升 0.7.6，跨大版）。公告（2026-10-23 通報、10-24 收錄）晚於 fork 點與上游同 SHA 的綠燈，上游同一份 `Cargo.lock` 預期也會紅（上游公告後尚無新 CI run，未實證）。 | 依賴鏈 `buzz-push-gateway` → `p256 0.13.2` → `elliptic-curve`／`ecdsa`／`primeorder` → `crypto-bigint 0.5.5`；升到 0.7.x 要在 Manifest 升 p256 大版並可能改 push-gateway API，`cargo update -p` 做不到，本機也沒有 cargo 工具鏈可驗證。替代做法是在 `deny.toml` 加帶理由的 ignore（上游處理 RUSTSEC-2026-0381 的方式），需維護者決定。觸發：上游升 p256 時帶入並重跑。 |
+| CI／Windows Rust | 取消（45 分鐘逾時） | fork 沒有暖快取，冷編譯 workspace＋Tauri 超過上游設定的 45 分鐘；快取只在成功後才存，所以不會自己好。 | 已由下方第 7 點修補（非 block owner 逾時 90 分鐘）。 |
+| Docker image | 失敗 | 推送目標寫死上游組織的 `ghcr.io/block/buzz`（relay 映像）與 `ghcr.io/block/buzz-push-gateway`，fork 沒有權限（permission_denied）；另一關要求同 SHA 的 CI 成功。 | 預期紅，無法在 fork 修。不停用 workflow。 |
+| Sprig | 失敗 | 「Update rolling release」對不存在的 `sprig-latest` release 執行 `gh release edit`（上游事先手動建立）。 | 建立 release 屬於公開發佈，需維護者決定；未建立。 |
+| Dependabot 更新（vitest、markdown-it） | 失敗 | Dependabot 更新器內部錯誤（無法讀細節）；vite、zod 已成功開出 PR #1、#2。 | 觀察；PR 在 CI 綠且審查後才合併。 |
+
+Dependabot alerts 與自動安全更新已於推送時開啟。branch protection 不設必要檢查（沒有任何一個會穩定回報成功）。
+
+## 2026-10-26 讓上游遺留的紅燈變綠（本 fork 對上游檔案的修補）
+
+這是第一次改上游持有檔，因為維護者要求不留紅燈且不得停用 workflow。每一處都是最小修補，加上註解標明 `fork patch`，同步上游時若衝突以上游為準再重做。
+
+1. **`deny.toml`＋`Cargo.lock`（cargo-deny）**：
+   - `tokio` 1.52.3 → 1.54.1（RUSTSEC-2026-0386）與 `lru` 0.18.0 → 0.18.2（iroh-relay 帶入的那一份，RUSTSEC-2026-0253 的修補版），皆 semver 相容，由 `cargo update` 產生。重新解析也順帶把 Windows 專用的 `windows-sys`／`windows-link` 依賴改指到 lock 內已有的版本（anstream、rustix、tempfile 等），只影響 Windows target，`--locked` 與 `cargo check` 通過。
+   - RUSTSEC-2026-0387（`crypto-bigint 0.5.5`，修補版只有 >=0.7.6，鏈在 `p256 0.13`）與 RUSTSEC-2026-0253（剩下的 `lru 0.16.4`：workspace 的 `lru = "0.16"` 與 `launchdarkly-server-sdk =3.2.0` 的 `lru ^0.16`，修補版 >=0.18.2）無法由相容升級解決，加 `ignore` 並附影響評估：push-gateway 只用 p256 解析公鑰、不處理祕密整數；`lru` 只有在鍵的 `Drop` 會 panic 且 `catch_unwind` 時才不安全，buzz 自己的鍵是 `String`（`nip_fi_resolver.rs`）；launchdarkly 3.2.0 內部（`events/dispatcher.rs`）鍵型別也是 `String`。觸發條件寫在 `deny.toml` 註解：p256 升到 crypto-bigint 0.7 線；workspace lru 與 launchdarkly 都升到 lru >= 0.18.2。
+   - 另一個選項「把 workspace `lru` 升到 0.18」被放棄：launchdarkly 仍會留下 0.16.4，升級沒有消除告警，只增加產品碼風險。
+2. **`docker.yml`**：非 `block` owner 時只 build、不 push、不寫 buildcache、不跑 qualify／merge，因為映像名固定在 `ghcr.io/block/*`（沒有權限）。保留 build 的驗證價值。若日後想推到自己的 ghcr，需要設 `vars.GHCR_IMAGE` 並處理 push-gateway 的寫死名稱，目前不做。
+3. **`sprig.yml`**：發佈 job 只在 `block` owner 執行。維護主管（代轉維護者）曾表示可建立 fork 自己的 `sprig-latest` release，但那會公開發佈 CI 建置的二進位檔，屬於需維護者明確同意的動作；改採「fork 只 build」讓 workflow 轉綠，未建立 release。
+
+4. **`sprig-image.yml`**：與 `docker.yml` 相同的 owner 閘門（映像 `ghcr.io/block/buzz-sprig`，fork 沒有權限）。8398c4e 的 run 證實 `permission_denied`。
+5. **`codeql.yml`（本 fork 自己的檔案）**：`timeout-minutes` 30 → 90。8398c4e 的 rust 掃描在 30 分鐘被取消（冷快取、約 40 個 crate 的 workspace）；先前 `2ab160a` 的同一掃描曾在時限內完成，所以是邊界而非壞掉。
+6. **Desktop Tauri (mesh) 的「Install Tauri dependencies (Linux)」失敗**：該步驟是 `apt-get install`（有重試腳本），日誌取不到錯誤細節，推測為套件鏡像暫時性問題（未證實），已重跑失敗的 job 一次確認；結果見下方。
+7. **`_ci-rust.yml` 的 Windows Rust 逾時**：非 `block` owner 時 45 → 90 分鐘。fork 沒有暖快取，冷編譯 workspace＋Tauri 在 `2ab160a`、`6b9d953` 兩次於 45 分鐘被取消；`block` owner 維持 45。
+8. **Desktop Smoke E2E 的兩個測試（`video-attachment.spec.ts:1469`、`voice-note.spec.ts:906`）在 `6b9d953` 失敗**：`8398c4e` 的 CI 這兩個測試通過（該次失敗的只有 Tauri 依賴安裝與其彙總 job），且 `8398c4e` 到 `6b9d953` 之間沒有產品碼差異（只動 workflow 與文件）；`abc369f` 亦曾通過，但 `abc369f` 之後的 `8398c4e` 有 `Cargo.lock` 更新（tokio、lru 等），所以不能以此證明與 lock 更新無關。判斷為共用 runner 負載下的逾時型不穩定（當時同時有兩個 Dependabot PR 的 CI 在跑），已重跑失敗 job 一次，結果見下方；若反覆失敗再視為真問題處理。
+
+## 2026-10-26 Dependabot 安全告警（第一批：相容的鎖檔更新）
+
+開啟 Dependabot alerts 後 fork 顯示約 50 組告警（上游遺留，產品碼與上游相同）。原則：只用工具產生的鎖檔更新（`cargo update -p`、`pnpm update --lockfile-only`、`uv lock --upgrade-package`），**不調高任何 `package.json`／`Cargo.toml`／`pyproject.toml` 的宣告下限**；pnpm 不覆寫內建的 `minimumReleaseAge` 預設（repo 沒有另行設定；Renovate 的 3 天政策不適用於手動 `pnpm update`，其中 seroval 1.7.2、baseline-browser-mapping 2.11.32 發佈未滿 3 天）。
+
+已處理：
+- **Rust**（兩份 lock 都有 `hickory-resolver`／`hickory-proto`／`hickory-net` 0.26.1→0.26.3；`xxhash-rust` 0.8.15→0.8.19、`cmov` 0.5.3→0.5.4 只在根目錄 `Cargo.lock`）。重新解析也把 Windows 專用的 `windows-sys` 等依賴改指到 lock 內已有的版本。`cargo deny check` 四項 ok；`cargo check -p buzz-relay -p buzz-relay-mesh -p buzz-push-gateway -p buzz-agent -p buzz-acp -p buzz-core --locked` 通過。Tauri 端沒有本機編譯，交給 CI 的 Desktop Tauri。
+- **npm**（`pnpm-lock.yaml`）：`markdown-it` 14.3.3、`seroval` 1.7.2、`vite` 8.3.5、`zod` 4.6.7、`nanoid` 3.3.20、`postcss` 8.5.31、`browserslist` 4.29.4、`baseline-browser-mapping`、`@babel/core` 7.29.7；vite 8.0→8.3 是 minor 升級，連帶 rolldown 1.0→1.2、新增 lightningcss 與其平台套件，實際打包行為會變，以 CI 的 build／E2E 為準。`pnpm install --frozen-lockfile` 與 `pnpm typecheck`、`pnpm check` 通過；desktop 單元測試 6833/6834，唯一失敗的 `useDocumentVisible.test.mjs`「focused polling pauses on blur…」在更新前的 lock 上同樣失敗（本機 Windows 環境），與本次無關。推送後待辦：確認 Dependabot PR #1（vite）、#2（zod）被取代後關閉。
+- **pip**（`benchmarks/harbor-buzz-orchestra/uv.lock`、`benchmarks/harbor-buzz-orchestra/testbed/uv.lock`，約 20 組告警含 3 個 critical：PyJWT、anyio、certifi）：**本批不處理**。上游鎖檔的來源全指向 Block 內部 Artifactory（`global.block-artifacts.com`），fork 無法使用；`uv lock` 會把所有套件來源整批改成 `pypi.org` 並重寫約 3.5k 行（實測），之後每次同步上游這兩個檔案都會全檔衝突，而且 litellm 會一次跳到發佈才一天的 1.106.4（連帶新增 boto3 等相依）。這兩個目錄是 benchmark 工具、不隨產品發行；CI 的 `benchmark-harbor.yml` 只在 `benchmarks/harbor-buzz-orchestra/**` 變更時觸發，且以 `pip install -e ".[dev]"` 依 `pyproject.toml` 解析、不讀 `uv.lock`。告警的實際暴露面只剩有人在本機用這兩份 lock 跑 `uv sync`，而鎖檔指向的內部 Artifactory 對 fork 本來就連不上。觸發條件：維護者要實際執行 benchmark 時，或決定接受來源改用 pypi.org 並以 `--upgrade-package '<pkg>==<最低修補版>'` 逐一鎖到修補版（litellm 等滿 3 天）。
+
+刻意不處理（附理由與觸發條件）：
+- **`@tiptap/*`＋`prosemirror-*` 家族**（`@tiptap/core`、`prosemirror-view` 告警）：整個家族升到 3.32.0 會讓 5 個連結貼上測試失敗（`composerLinkPastePipeline.test.mjs`：「expected Link's onCreate to register the buzz protocol with linkify」），需要改產品碼；只升單一套件則 `prosemirror-model` 出現兩份型別而 `tsc` 失敗。觸發：上游自己升 tiptap 時帶入。
+- **`rmcp`**（high／medium）：有漏洞的 1.8.0 來自 `crates/buzz-agent/Cargo.toml` 自己宣告的 `rmcp = { version = "1", ... }`（兩份 lock 都有）；根目錄 `[workspace.dependencies]` 裡的 `rmcp` 沒有任何 crate 繼承。修補版是 2.x／3.x，要把 buzz-agent 的 client／transport-child-process 用法遷移到 3.x（產品碼 API 變動）。Dependabot PR #3（只改那行沒人用的 workspace 宣告與 Tauri lock 的 Windows 依賴指向）因此關閉，並未修掉告警。觸發：上游遷移 buzz-agent 到 rmcp 3.x。
+- **`glib` 0.18.5**（Tauri lock，medium）：修補版 0.20.0，被 gtk3-rs 一整組擋住；觸發：Tauri／gtk 升版。
+- **`@vitest/mocker`**、**`postcss-selector-parser`**：目前可解析的版本低於告警的修補版（受 pnpm 發佈時間政策或相依範圍限制），隔日重跑 `pnpm update` 再試；已在報告列出。
+
+## 2026-10-26 維護者決定：剩餘告警的處理（經維護主管代決）
+
+下列項目**保持現狀、告警保持開啟、不 dismiss**；每項附觸發條件，條件成立才回頭處理。
+
+1. **pip benchmarks 告警**（`benchmarks/harbor-buzz-orchestra/uv.lock`、`.../testbed/uv.lock`，含 PyJWT、anyio、certifi 三個 critical）：不重寫 `uv.lock`。來源改成 pypi.org 會整批重寫、每次同步上游都全檔衝突；benchmarks 不在 fork 以 `uv.lock` 執行、不隨產品發佈，CI 的 benchmark-harbor 亦以 pip 依 `pyproject.toml` 解析、不讀 `uv.lock`。記為**已評估的風險**。觸發條件：上游更新那兩份鎖檔（隨同步帶入），或 fork 開始執行 benchmarks。
+2. **rmcp、`@tiptap/*`＋`prosemirror-*`**：fork 不改產品碼（會與上游分岔）。等上游升級後隨同步帶入。觸發條件：上游升級（rmcp 為上游把 buzz-agent 遷移到 3.x），或公告確認影響 fork 實際使用的路徑。
+3. **`sprig-latest` release**：不建立（不在 fork 公開發佈 CI 建置的二進位檔）；Sprig 發佈 job 維持只在上游 owner 執行。觸發條件：維護者決定要在 fork 發佈二進位檔。
+4. **`glib` 0.18.5（Tauri）、`@vitest/mocker`、`postcss-selector-parser`**：目前沒有可相容的修補版，或受 pnpm 內建發佈時間預設限制。觸發條件：隔日以 `pnpm update <pkg> -r --depth Infinity --lockfile-only` 重試後兩者（尚未重試）；`glib` 待 Tauri／gtk 升版。重試仍無法解析就維持現狀，下次同步上游時再試。
+
+## 2026-10-27 深度掃描（只掃 fork 自己加的東西）
+
+範圍：`docs/fork/`、`tools/`＋`tests/fork`、fork 新增與修補的 workflow、`deny.toml` 的 ignore、fork 對鎖檔與產品測試碼的改動。上游原封不動的產品碼不在範圍。每個缺陷先寫修前會失敗的測試再修，一個缺陷一個 commit。
+
+已修（測試都在 `tests/fork/test_fork_tools.py`）：
+
+1. **`sprig.yml` 的 `publish-tag` 沒有 owner 守衛。** 在 fork 推 `sprig-v*` tag 會用 CI 建置的二進位檔建立公開 release，與上方「Sprig 發佈 job 維持只在上游 owner 執行」的決定相反（只有滾動 release 的 `publish` 有守衛）。加上守衛；測試檢查所有發佈 workflow 裡有寫入權限的 job 都帶守衛、所有能 push 的 build-push 步驟的 `push=` 都帶守衛。
+2. **新鮮度檢查把未加註解的 SHA pin 讀成版本下限。** `actions/checkout@34e11487…` 的下限變成 `34`（永遠不過期）、`azure/setup-helm@1a275c3b…` 變成 `1`（永遠過期）。三個 pin 受影響（`push-gateway-helm-chart.yml`）。改為 NO FLOOR。
+3. **上游檢查的 `git`／`gh` 呼叫沒有逾時**，網路卡住會拖到 runner 的 10 分鐘上限且不產生報告；`git` 不存在時以裸 traceback 結束。逾時與 `OSError` 現在是 `UpstreamCheckError`（報告「Check failed」、exit 2），`gh` 逾時回 `None`（「未檢查」，不是「無新項目」）。
+4. **兩支工具在無法編碼報告的主控台上崩潰**（Windows 無 `PYTHONUTF8` 的 cp1252／cp950：繁中狀態行或 issue 標題裡的 emoji → `UnicodeEncodeError`），發生在檔案寫完之後，exit 1 與 `--strict` 的「上游有更新」同碼。stdout 改為 `errors="replace"`。
+5. **延後（deferral）的過期判斷以「已審視版本」的精度截斷**：唯一的兩段版本 `openai/codex-action "1.13"` 在 1.13.4 仍延後，與「registry 超過該版本就自動過期」不符。改為全精度比較；`deferredLatest` 無法解析（如 `"latest"`）的項目永遠不會過期，載入時改為忽略。
+6. **Cargo workspace `members` 的 glob 被當字面路徑**，`crates/*` 之類的成員會無聲地從報告消失。改為展開並尊重 `exclude`；目前的明列清單解析結果不變（38 份）。
+7. **registry 回應被截斷（`IncompleteRead`，不是 `OSError`）會讓整份新鮮度報告中止**，改為一筆 CHECK FAILED。
+8. **`FORK.md`／`NOTICE.md` 說產品碼與上游逐位元組相同／未修改**，但 fork 已修補四個 workflow、加兩條 `deny.toml` ignore、升級三份鎖檔、動過 `buzz-dev-mcp` 的測試碼。補上「上游持有檔的修補」表，`deny.toml` 加 `fork patch (SanHsien/buzz)` 標記，測試要求帶標記的檔案必須列在 `FORK.md`。
+9. **Tauri 鎖檔沒跟上 `cargo-deny` 的修補。** CI 的 `cargo-deny check` 只讀根 workspace，所以 tokio 1.54.1（RUSTSEC-2026-0386）、lru 0.18.2（0253）只進了根 `Cargo.lock`；`desktop/src-tauri/Cargo.lock`（桌面 app 實際用的依賴集）仍是 tokio 1.52.3、lru 0.18.1、h2 0.4.15（0258）、rtrb 0.3.4（0274）。以 `cargo update -p <crate> --precise` 升到 tokio 1.54.1、lru 0.18.2、h2 0.4.16、rtrb 0.3.5（相容升級、不動 manifest）；`cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories` 修後沒有 vulnerability／unsound 條目。本機只能 `cargo check --locked -p tokio -p h2 -p rtrb` 通過（完整的 Tauri crate 在本機卡在 `opusic-sys` 需要 cmake），完整編譯交給 CI 的 Desktop Tauri。`cargo update -p tokio` 重新解析時，順帶把 arboard 3.6.1 的 `windows-sys` 由 0.60.2 換成 0.59.0（arboard 允許 `>=0.52.0, <0.61.0`，兩版原本都在鎖檔裡，只影響 Windows），這是附帶變動，不是刻意升降版。
+
+觀察（上游的東西，不改；附觸發條件）：
+
+- **Tauri 鎖檔沒有任何 CI 的安全掃描**（Dependabot 只對有 GHSA 的告警開單）。同一個 `cargo deny` 掃 Tauri 鎖檔還會報 `unic-*`、`mach`、`proc-macro-error` 的 unmaintained。要讓 CI 掃它需要另一份帶 ignore 的設定，屬於上游 CI 結構。觸發：維護者要 Tauri 鎖檔進 CI，或下次同步上游時順手重跑上面那條指令。
+- **`str_replace.rs`、`view_image.rs` 的測試 `make_state` 沒拿 `lock_shell_env()`**（`e3561ee` 只補了 `shell.rs`、`read_file.rs`）。它們不依賴 shell 解析結果，沒有已知失敗。觸發：這兩處的測試在 Windows 出現不穩定。
+- **`helm-chart.yml`（`chart-v*` tag）、`push-gateway-helm-chart.yml`（`push-chart-v*` tag）、`staging-dev-relay-image.yml`（手動）沒有 owner 守衛**，在 fork 推 tag 或手動觸發會嘗試推 `ghcr.io/block/*`，結果是權限失敗（紅燈）而不是發佈。fork 不推這些 tag。觸發：fork 開始推 tag，或需要這些 workflow 轉綠。
+
+## 2026-10-27 `10aedc7` 兩條紅燈的原因與處理
+
+### Dependency freshness
+
+本機重現（`GH_TOKEN=… python tools/check_dependency_freshness.py`）與 CI 日誌一致：報告裡**只有一列**需要處理（`REVIEW UPDATE`），另有四列 `NO FLOOR`（未註解的 SHA pin，設計上不比較，不算紅燈）。深度掃描修的兩件事（全精度過期比較、SHA 不當下限）沒有讓被遮住的項目浮出來：
+
+- **`openai/codex-action` 沒有過期。** 宣告 `v1.12`，延後 `1.13`；該 repo 的 tag 最新就是 `v1.13`（沒有 `v1.13.x` tag，`releases/latest` 也是 404），registry 沒有超過延後的版本，狀態維持 `DEFERRED at 1.13`。
+- **唯一的 `REVIEW UPDATE`：`taiki-e/install-action`**（`v2.79.15`，`_ci-relay.yml`／`_ci-rust.yml`／`sprig.yml` 共六處）。10-26 的延後停在 2.87.31，2.87.32（10-26T15:24Z）發佈後自動過期——這是機制照設計運作，不是新缺陷。
+  - **沒有升級。** 六處 pin 是上游持有，上游 `main`（`0e36dbc`）仍是同一個 SHA `0fd4636…`；`v2.79.15…v2.87.32` 之間 914 個 commit，動到 `action.yml`、`main.sh`，而 workflow 要的是精確版本工具（`cargo-nextest@0.9.136`、`cross@0.2.5`），只有推送後 fork 自己的 CI 跑得出來，本機無法驗證。改 `tool` 以外的上游 workflow 檔也會與上游下一次 bump 衝突。
+  - **做法：** `deferredLatest` 改 2.87.32，理由寫明為什麼不升與觸發條件（上游 bump 時隨同步帶入；或 fork 開始自己維護 CI workflow）。該 action 約每 2–5 天一個 patch（v2.87.x 已 33 版），這個條目還會再過期；每次過期是「重新追問」，不是新決定。下限沒有調高。
+- **第二個紅燈來源：開著的 Dependabot PR #5。** `dependency-freshness.yml` 把「有任何開著的 Dependabot PR」當作需要處理。#5 是 `certifi 2026.6.17 → 2026.10.18`，只改 `benchmarks/harbor-buzz-orchestra/testbed/uv.lock`，**+1672/−1672**，其中 1645 行是把來源從 `global.block-artifacts.com` 改成 `pypi.org`——正是 2026-10-26「維護者決定」第 1 條拒絕的整批重寫（`revision` 也從 3 變 5）。依該決定**不合併**；PR 應以註明該決定的留言關閉。關閉是對 fork 遠端的寫入，本輪未做（見回報）。注意：只要 pip 告警還在、自動安全更新開著，Dependabot 之後可能針對同一份鎖檔再開別的套件的 PR，紅燈會再出現；要根治需維護者決定：關掉 uv 的自動安全更新，或接受鎖檔來源改成 pypi.org（原決定的觸發條件）。
+
+### Upstream check
+
+- 首次失敗的 run（attempt 1）報告是「12 commits＋PR／issue **未檢查**」——`gh` 在 runner 上列舉失敗，`collect_new_tickets` 回 `None`，工具照設計報「未檢查」而不是「無新項目」。同一個 commit 重跑（attempt 2）PR／issue 都列舉成功（14 筆 PR、1 筆 issue）；本機兩個 `gh … list --limit 1000` 各約 7 秒、都成功。判斷為 runner 上的暫時性 `gh` 失敗（原因未知：`gh` 的 stderr 沒被保留）。觸發條件：再發生一次就讓工具把 `gh` 的 stderr 寫進報告。
+- 紅燈本身是真的：上游在水位之後確實有東西。以下為審查。
+
+## 2026-10-27 上游審查（commit `9e8c9fc → 209fcd2`；PR 8593 → 8610；issue 8592 → 8597）
+
+**審查前提：** 本 fork 與水位 `9e8c9fc` 之間，產品目錄只有 7 個檔案不同（`git diff 9e8c9fc HEAD --stat -- crates desktop mobile web admin-web deploy`：`buzz-dev-mcp` 兩個測試檔、`desktop/src-tauri/Cargo.lock`，以及本輪帶入的 push-gateway 四檔）。判準六的結構性論證在此成立：上游這 13 個 commit 與 fork 的分歧處幾乎不重疊（見下），沒有「fork 專屬缺陷」需要另外移植。
+
+**上游 CI 狀態（唯讀查 `0e36dbc` 的 check runs；之後的 `209fcd2` 只是 mobile 兩檔）：** 失敗三項——`Desktop`／`Desktop Domain / Desktop`／`Qualify relay image source`。`Desktop` 失敗的 job 是 `Desktop Tauri (core／compiled-flags)` 的「Install Tauri dependencies (Linux)」（`apt-get`），與本 fork 在 2026-10-26 見到的同一步驟（第 6 點）相同，屬 runner 環境問題，不是程式碼回歸；`a3a47e6`、`ab73cd9` 兩個 commit 上 `PostgreSQL Tests` 曾紅，tip 上已綠。
+
+### Commit 軸（13 筆；審查途中上游又進了 `209fcd2`，連同 #8609、#8610 一併納入）
+
+| commit | 內容 | 規模 | 與 fork 的重疊 | 處理 |
+| --- | --- | --- | --- | --- |
+| `d676c7b` #8592 | `p256` 0.13→0.14（RUSTSEC-2026-0387，crypto-bigint 0.5.5→0.7.9） | 5 檔 +98/−111 | **有**：fork 為此加了 `deny.toml` ignore | **帶入**（`3e0e7c8`，逐字 cherry-pick，`Cargo.lock` 無衝突）；移除 fork 的 0387 ignore；觸發條件（「p256 升到 crypto-bigint 0.7 線」）已成立。`cargo deny check`：advisories ok；`cargo check -p buzz-push-gateway --locked` 通過；該 crate 的測試因 dev-dependency 的 vendored OpenSSL 在本機（無 native perl／nmake）建不起來，留給 CI。 |
+| `7ce4224` #8503 | mesh 過期的 peer 記錄與開機儀器 | 11 檔 +1018/−57 | 只有 `Cargo.lock`（自動合併）；`buzz-relay-mesh/Cargo.toml` 新增 `metrics`／`metrics-util`（workspace 已有） | 不獨立帶入，隨同步合併 |
+| `4250014` #8520 | 使用者刪除改走已存檔的階段轉換 | 34 檔 +3732/−170 | 無 | 同上 |
+| `4c7ba3b` #8567 | 文件：RELEASING.md 移除 NIP-FI migration gate | 1 檔 −39 | 無 | 同上 |
+| `d0dee1c` #8575 | relay：一個 kind:9000 加入多人 | 11 檔 +1404/−200 | 無（動 `_ci-relay.yml` 三行測試清單，fork 未改該檔） | 同上 |
+| `369ffa0` #8401 | relay：驗證 NIP-FI agent token | 36 檔 +3630/−548 | 無 | 同上 |
+| `d727033` #8548 | 文件／提示：memory 當索引、來源標註 | 3 檔 +23/−4 | 無 | 同上 |
+| `b8b1ab5` #8524 | push：避免空的投遞 claim | 5 檔 +584/−24 | 無 | 同上 |
+| `d090ac2` #8490 | mobile：減少閒置與恢復時的同步 | 9 檔 +403/−38 | 無（mobile，fork 不建置） | 同上 |
+| `ab73cd9` #8580 | mobile：在社群同步前還原快取的頻道 | 24 檔 +2424/−405 | 無 | 同上 |
+| `a3a47e6` #8579 | relay：unlisted 頻道設定 | 25 檔 +1730/−101 | 無 | 同上 |
+| `0e36dbc` #8495 | db：讀取連線池保溫、移除 pre-acquire ping | 8 檔 +863/−186 | 無 | 同上 |
+| `209fcd2` #8608 | mobile：建立 push 訂閱時忽略不相干的靜音設定 | 2 檔 +22/−4 | 無（mobile） | 同上；它是 PR #8608 的 squash，新增行與我們審過的 PR head `69a6df7` 逐行相同 |
+
+**「隨同步合併」的依據（可重跑）：** 在 `3e0e7c8` 之上 `git merge --no-commit --no-ff <上游 0e36dbc>` 自動合併完成、零衝突（`Cargo.lock` 也自動合併），且合併後 `cargo metadata --locked` 通過；之後 `git merge --abort`（當時上游 tip 是 `0e36dbc`；之後多的 `209fcd2` 只動兩個 mobile 檔，不與任何 fork 修補重疊）。**水位推進不等於產品碼已同步**：本檢查的「behind」是相對水位算的，推進後會顯示 behind 0，但產品碼實際仍落後這 12 個 commit（除 `d676c7b` 外的全部）。它們在此明列：合併的時機由維護者決定；建議先推送本輪三個 commit、看 CI 結果，再單獨合併上游（出現新紅燈才能歸因）。合併後新鮮度報告會多出新宣告的列（例如 `metrics`），屆時另行處理。
+
+**隱藏內容掃描（判準八）：** 13 個 commit 的完整 diff（`9e8c9fc..209fcd2`，157＋2 檔）：行內長串空白後接內容、`eval(`／`new Function(`、`globalThis`／`global.require`、≥120 字元 base64／hex、零寬與雙向控制字元，皆無命中；超過 400 字元的新增行逐筆看過，都是文件表格（`NOSTR.md`、`NIP-FI`）、CLI help 字串、`Justfile` 的 nextest 篩選式、`base_prompt.md` 的提示文字與一則 Rust 文件註解。
+
+### PR 軸（16 筆新項目；15 筆 open，#8608 已合併成 `209fcd2`，無已關閉未合併）
+
+全部：**不引進，未合併前不審內容細節，上游合併後經 commit 軸審查**（同 #8593 的做法）；PR 水位推進到 8610。每筆取**審查當時**的 head 並掃描 diff（表中 head 是審查時的值；之後被 force-push 的見各列註記）（掃描方式同上；`+` 前綴加縮排造成的「長空白」誤判已排除）：
+
+| PR | head | 規模 | 隱藏內容 | 與 fork 的關係 |
+| --- | --- | --- | --- | --- |
+| #8594 auto-join 預設頻道 | `502d016` | 18 檔 +1286/−86 | 無（最長新增行是 `NOSTR.md` 表格） | relay／db，fork 無分歧碼 |
+| #8595 invites 走原生網路 | `3ed2df1` | 8 檔 +164/−137 | 無（`globalThis.window` 僅在 `invites.test.mjs` 當測試替身） | desktop |
+| #8596 影片縮小再上傳 | `daff931` | 1 檔 +105/−12 | 無 | desktop |
+| #8598 Rust 1.98.1（macOS 27） | `8b28f5f` | 29 檔 +85/−73 | 無 | **動 `_ci-rust.yml`、`release.yml`、`windows-canary.yml`、Dockerfile**：與 fork 的 `_ci-rust.yml` Windows 逾時修補同檔。觸發：上游合併時重驗該逾時修補是否還在、`docker.yml` 守衛是否衝突 |
+| #8599 mobile QR 優先 onboarding | `37194be` | 13 檔 +563/−263 | 無 | mobile。**審查期間 head 換了三次：`0a4d964`（12 檔 +302/−101）→ `12c7d59`（13 檔 +563/−263）→ `37194be`（同規模）**；三個版本都掃過、沒有隱藏內容，以最後的 head 為準。主管覆核時（2026-10-27）head 已再換成 `86e250a`，未掃；不引進，上游合併後經 commit 軸審查 |
+| #8600 draft：邀請同意移出瀏覽器 | `32767f9` | 2 檔 +60/−47 | 無 | web |
+| #8601 邀請 handoff 的原生同意 | `a1d1703` | 16 檔 +848/−135 | 無（`globalThis.fetch`／`__TAURI_INTERNALS__` 僅在 `useClaimInvite.jsdom-test.mjs` 當測試替身） | desktop |
+| #8602 專案卡片可刪 repository（#8597） | `810b5a3` | 9 檔 +527/−24 | 無 | desktop；對應下方 issue #8597 |
+| #8603 持續重試失敗的 agent runtime 對帳（#8591） | `45625d4` | 4 檔 +100/−10 | 無 | desktop |
+| #8604 保留 `child_pid`、認得 `codex` binary（#8590） | `a9695aa` | 3 檔 +16/−3 | 無 | `kill_process_group` 為 Unix 路徑，非 Unix 仍 fallback `start_kill()`，不是 Windows 專屬修正 |
+| #8605 為假刪除流程產生使用者社群清單 | `987af1d` | 25 檔 +1405/−106 | 無 | admin／db。審查期間 head 由 `8b89997` 換成 `987af1d`（規模相同，疑似 rebase）；兩版都掃過 |
+| #8606 draft：kind:9000 與成員寫入同一交易（#8575 的後續） | `d18e88f` | 5 檔 +425/−55 | 無（最長新增行是 `NOSTR.md` 表格） | relay |
+| #8607 mobile 批次初始已讀種子 | `6a232ed` | 6 檔 +221/−61 | 無 | mobile |
+| #8608 mobile 忽略不相干的靜音設定 | `69a6df7` | 2 檔 +22/−4 | 無 | mobile；**已合併為 `209fcd2`**，見 commit 軸 |
+| #8609 push：跨版本接受正規 channel UUID | `0f5acd4` | 9 檔 +156/−10 | 無（最長新增行是 `NIP-PL.md` 表格） | relay／mobile |
+| #8610 draft：把 push 設定失敗與 app 渲染隔離 | `e9a1068` | 8 檔 +573/−47 | 無 | mobile。主管覆核時（2026-10-27）head 已換成 `629c2c6`，未掃；不引進，上游合併後經 commit 軸審查 |
+
+### Issue 軸（1 筆新項目）
+
+- **#8597**（open）：桌面端刪除專案後，預設 repository 留下且無法刪除。對應 PR #8602。fork 的 `desktop/src` 與上游相同（`git diff 9e8c9fc HEAD -- desktop/src` 無輸出），所以這是 fork 同樣帶有的上游缺陷，不是 fork 專屬。不處理（不改產品碼）；觸發：上游合併 #8602。
+
+### 水位
+
+`tools/upstream_baseline.json`：`reviewed_through` → `209fcd21725b8728fed8b14dca1636018d175458`，`reviewed_pr_through` → 8610，`reviewed_issue_through` → 8597，`reviewed_date` → 2026-10-27。
+
+## 2026-10-27 把上游 `209fcd2` 併進產品碼
+
+上一節審查時產品碼只帶入 `d676c7b`（`3e0e7c8`），其餘 12 個 commit 明列為「隨同步合併」。本節是那次合併。fork 沒有壓縮過，與上游共同祖先是水位 `9e8c9fc`，所以用一般的 `git merge 209fcd2`（`--no-ff`），不是 cherry-pick。
+
+- **結果：零衝突。** `Cargo.lock` 自動合併，相對合併前只多兩行（`buzz-relay-mesh` 的 `metrics`、`metrics-util`，workspace 本來就有這兩個 crate）。上游這 13 個 commit 沒有動任何 fork 修補檔：`deny.toml`、`docker.yml`、`sprig.yml`、`sprig-image.yml`、`_ci-rust.yml`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`crates/buzz-dev-mcp`；`FORK.md` 表中帶 `fork patch` 標記的檔案合併前後 `git diff` 為空。唯一動到的 workflow 是 `_ci-relay.yml`（三行測試清單，fork 未改）。
+- **`d676c7b` 與 `3e0e7c8` 內容相同**，合併時沒有產生變動。
+- **驗證（本機，`cargo` 在 `~/.cargo/bin`）：** `cargo deny check` 四項 ok（唯一與 advisory 相關的警告是上游自己的 `RUSTSEC-2026-0381` ignore「未命中」，合併前後鎖檔在該鏈沒有差異）；`cargo check --workspace --locked --exclude buzz-audio-client` 通過；`cargo metadata --locked` 對 `desktop/src-tauri` 通過，`cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories` 沒有 vulnerability／unsound 條目，只有上一節已記的 `unic-*`／`mach`／`proc-macro-error` unmaintained。`buzz-audio-client` 排除的原因：它依賴 `opus` → `opusic-sys`，build script 需要 `cmake`，本機沒有（工作區內沒有其他 crate 依賴它，與本次合併無關；交給 CI）。未跑 Rust 測試（push-gateway 的測試依賴 vendored OpenSSL，本機建不起來；其餘交給 CI）。
+- **新鮮度：** 合併前後的報告逐位元組相同（無新增列、無新的 `REVIEW UPDATE`）。`metrics` 系列在 workspace 本來就有宣告，狀態 OK。
+- **上游已經又前進：** 審查與本合併都停在 `209fcd2`；唯讀 `ls-remote` 看到上游 `main` 目前是 `a38fedb`。水位**維持** `209fcd2`，之後的 commit 由下次 `upstream-check` 列出。
+- **建議：** 推送後看 CI，出現的新紅燈（尤其 Desktop Tauri、Rust、Docker／Qualify relay image）要與上一節記的「上游 `0e36dbc` 的 check runs」基準（Desktop Tauri 的 apt-get 步驟、Qualify relay image source 已紅）比對再歸因。
+
+## 2026-10-28 深度掃描第二輪（只掃 fork 自己加的東西）
+
+範圍同上一輪：`git diff 209fcd2..main` 的 26 個檔案。`tools/check_upstream_updates.py` 是艦隊共用的正本（`SanHsien/repo-fleet-ops` `tools/canonical`），缺陷要回報正本、不在這裡改。
+
+已修（測試在 `tests/fork/test_fork_tools.py`，每個都先確認修前失敗）：
+
+1. **浮動 tag 加了非版本的註解就失去下限。** `uses: owner/repo@v6 # matches the runner image` 從註解取版本、取不到，列成 NO FLOOR，`v6` 從此不比較。現在只有註解本身是版本時才用註解。目前樹內沒有這種寫法（零列受影響）。
+2. **`[target.'cfg(...)'.dev-dependencies]` 沒被讀取**，只寫在那裡的 crate 會無聲地從報告消失。目前樹內沒有這種表（零列受影響）。
+3. **Cargo 的 `0.0.z` 需求只比到 `0.0`。** Cargo 的 caret 在 `0.0.z` 只允許那個 patch，`0.0.4` 出了仍顯示 OK。改為比三段；`0.y.z` 仍比 major.minor。目前樹內沒有 `0.0.z` 宣告（零列受影響）。
+
+告警盤點（2026-10-28，open）：
+
+- **CodeQL 161 筆，全部在上游持有的檔案**（rust 112、js/ts 28、actions 18、python 3 在 `benchmarks/`）。fork 新增的檔案沒有任何告警；fork 修補過的 workflow（`_ci-rust.yml`、`docker.yml`、`sprig*.yml`）也沒有。actions 告警在 `ci.yml`、`_ci-clients.yml`（缺 `permissions`）、`release.yml`、`codex-security-review.yml`（untrusted checkout），fork 都沒改過。不改，隨上游。
+- **Dependabot 103 筆，全部在上游持有的 manifest／鎖檔**：pip 84（兩份 benchmarks `uv.lock`，見 2026-10-26 決定第 1 條）、rmcp 12（同第 2 條）、tiptap／prosemirror 3（同第 2 條）、glib 1（Tauri／gtk）、`postcss-selector-parser` 1、`@vitest/mocker` 2。
+- **重試結果（第 4 條的觸發條件）：** `postcss-selector-parser` 6.0.10 是 `@tailwindcss/typography` 寫死的精確版本（最新版 0.5.20 仍是 `6.0.10`），只能改 manifest 加 override，不屬於鎖檔更新，維持現狀；觸發：typography 放寬範圍。`@vitest/mocker` 見下。glib 未變。
+- **`@vitest/mocker`：已修。** 修補版 4.1.12 已可解析；只動鎖檔，把 vitest 家族由 4.1.11 升到 4.1.12（附帶 vitest 子樹的 chai、obug、std-env、tinyexec、tinyrainbow、`@jridgewell/sourcemap-codec`）。`pnpm install --frozen-lockfile` 對整個 workspace 與唯一使用者 admin-web 通過，`vitest run` 在 4.1.12 啟動正常（admin-web 沒有測試檔）。CI 因 Actions 被停用無法驗證（見下）。
+
+觀察（不改；附觸發條件）：
+
+- **Actions 從 2026-10-26T20:34Z 之後就沒有再跑過。** 最後一次是 `8b45094` 的推送（含上游合併 `9016812`，CI 全綠）；之後三次推送（`6c78657`、`683c8a8`、`4576562`，都只動 `tools/`、`tests/fork`）都沒有 run；`POST .../dispatches` 回 HTTP 422「Actions has been disabled for this repository」，但 `GET .../actions/permissions` 回 `enabled: true`、所有 workflow 都是 `active`。設定 API 與實際執行不一致，表示停用來自 GitHub 端而不是 repo 設定；同一現象也出現在 OpenMontage、AIHOT、reverse-skill、claude-obsidian，rea 的 Security log 有 GitHub 內部 IP 寫入的 `actions_policy_violation`。原因只能在維護者帳號的 Security log 或向 GitHub 客服查。**後果：** 那三個工具 commit 與本輪的 commit 只有本機驗證（`pytest tests/fork`、`pnpm install --frozen-lockfile`），`Fork tools` 的 Windows／Ubuntu 矩陣與 CodeQL 都沒跑。觸發：Actions 恢復後，對 main 手動跑 `CI`、`Fork tools`、`CodeQL`。
+
+## 2026-10-28 上游審查與同步（commit `209fcd2 → 24a3706`；PR 8610 → 8643；issue 8597 → 8641）
+
+**審查前提：** fork 與水位 `209fcd2` 之間，產品目錄的分歧仍只有 2026-10-27 那幾處（`buzz-dev-mcp` 兩個測試檔、`desktop/src-tauri/Cargo.lock`、push-gateway 四檔），加上本日的 `Cargo.lock` pulldown-cmark 0.13.5。判準六的結構性論證仍成立；逐筆對照如下。
+
+**隱藏內容掃描（判準八）：** `209fcd2..24a3706` 的完整 diff（201 檔，+12143／−1485）：行內長串空白後接內容只有 6 行 Dart 縮排；`eval(`／`new Function(`／`global.require`、≥120 字元 base64／hex 皆無；超過 400 字元的新增行只有 `NIP-AP.md` 一段說明；零寬字元 3 個，都是 `mobile/test/features/profile/profile_setup_native_name_test.dart` 測試資料裡家庭 emoji（👨‍👩‍👧‍👦）的 ZWJ。
+
+### Commit 軸（20 筆，全部隨同步合併）
+
+| commit | 內容 | 與 fork 的重疊 |
+| --- | --- | --- |
+| `8216db1` #8598 | Rust 1.95.0 → 1.98.1（macOS 27 proc-macro 載入） | **有**：`_ci-rust.yml` 與 fork 的 Windows 冷建置逾時修補同檔。上游只改那個檔一行註解裡的版本號，自動合併後 fork 修補（`timeout-minutes: ${{ github.repository_owner == 'block' && 45 \|\| 90 }}`）原樣保留。`rust-toolchain.toml`、三個 Dockerfile 只是版本號與映像 digest，fork 沒改過。2026-10-27 記下的觸發條件「上游合併 #8598 時重驗逾時修補是否還在、`docker.yml` 守衛是否衝突」：兩者都已確認（`docker.yml` 未被動到） |
+| `8ceca8a` #8607、`5996e5d` #8610、`b148849` #8547、`ff9eb8f` #8599、`a4e83df` #8518、`b77ad2e` #8616、`b929b2c` #8629、`d4a0706` #8626、`5a8102e` #8617、`5c2ea2e` #8628 | mobile 功能與修正（已讀種子批次、push 設定失敗隔離、Solo 聊天、QR onboarding、公開頻道連結、Builderlab 遠端 agent、個人資料設定等） | 無（mobile，fork 不建置也沒改） |
+| `834dca2` #8605 | 假刪除流程的使用者社群清單 | 無（admin／db） |
+| `a38fedb` #8544、`6861e18` #8612 | desktop：Huddles 認得沒有 NIP-OA 的 agent；窄訊息列的 FileCard | 無（`desktop/src` 與上游相同） |
+| `f167c4c` #8609 | push：跨版本接受正規 channel UUID | 無 |
+| `3ce3a2e` #8631 | NIP-AP 文件定義 agenttype | 無 |
+| `c477663` #8630 | push-gateway 記錄哪一項 App Attest 檢查拒絕裝置 | 無（fork 的 push-gateway 四檔差異不在這幾行，自動合併） |
+| `403855d` #8564 | relay 測試：group-state Postgres 測試用一般 acquire 逾時 | 無 |
+| `f33ebaa` #8620 | schema：desired-state bootstrap 不再自動 fence 新表 | 無 |
+| `24a3706` #8634 | relay：記錄 NIP-FI shadow would-deny 的主體與原因 | 無 |
+
+**合併：** `git merge --no-ff upstream/main`（`24a3706`），零衝突。所有帶 `fork patch (SanHsien/buzz)` 標記的檔案中，只有 `_ci-rust.yml` 被動到（即上列那行註解）；`deny.toml`、`docker.yml`、`sprig*.yml`、`desktop/src-tauri/Cargo.lock`、`pnpm-lock.yaml`、`crates/buzz-dev-mcp`、根目錄 `Cargo.lock` 都沒被上游動到。
+
+**驗證：** 本機以上游新的工具鏈 Rust 1.98.1（依 `rust-toolchain.toml` 自動安裝）驗證：`cargo metadata --locked` 通過；`cargo deny check` 四項 ok；`cargo check --workspace --locked --exclude buzz-audio-client` 通過（3 分 38 秒）；`pytest tests/fork` 29 passed。完整測試與 Desktop／mobile 建置交給 CI。
+
+### PR 軸（30 筆：10 筆已合併並隨 commit 軸進來，1 筆關閉未合併，19 筆 open）
+
+已合併：#8612、#8616、#8617、#8620、#8626、#8628、#8629、#8630、#8631、#8634（合併 commit 分別在上表），全部隨本次同步進來。
+
+其餘全部**不引進，上游合併後經 commit 軸審查**（同 2026-10-27 的做法）。每筆取審查當下的 head 掃過隱藏內容，都沒有命中；兩筆各有 1 行超長，都看過：#8611 是遷移說明文字，#8635 是 `Justfile` 的 nextest 篩選式。需要特別記下的：
+
+| PR | head | 與 fork 的關係與觸發條件 |
+| --- | --- | --- |
+| #8624 15 個套件的安全升級（pnpm overrides） | `af329e9` | fork 的 Dependabot 仍開著的 `@tiptap/core`（high＋medium，#114／#112）、`prosemirror-view`（high，#116）就是這個 PR 要修的，屬 2026-10-26「維護者決定」第 2 項「等上游」的範圍；它同時把 `postcss-selector-parser` 6.0.10 覆寫到 6.1.5，也會關掉 fork 的 #134（medium），取代先前「等 `@tailwindcss/typography` 放寬範圍」那個觸發條件。seroval critical（GHSA-p6vx-979v-rg4c、GHSA-jp82-f5mq-hwhp）fork 不受影響：`pnpm-lock.yaml` 已是 `seroval@1.7.2`，高於修正版 1.6.3。觸發：#8624 合併後經 commit 軸帶入，屆時確認上述 4 筆告警（#112、#114、#116、#134）關閉 |
+| #8643 讓 Hermes 驅動的 agent 能發訊息 | `b37af7b` | Hermes 的 terminal 在獨立 gateway session，拿不到 `BUZZ_PRIVATE_KEY`；改為每個 Hermes ACP session 掛 `buzz-dev-mcp`。動 `crates/buzz-acp`、desktop managed agents、pnpm 鎖檔。fork 沒改這些檔。觸發：合併後經 commit 軸帶入；若維護者在本 fork 跑 Hermes agent 遇到 `BUZZ_PRIVATE_KEY is required`，那就是這個缺陷 |
+| #8613 PR 上變更的測試重跑十次 | `280cc23` | 動 CI workflow；合併後要重驗 fork 對 `_ci-rust.yml` 等的修補是否仍在 |
+| #8633 desktop 解釋非 relay URL（closed 未合併） | `09e6463` | 上游沒收，不處理 |
+
+其餘 open PR（#8611、#8614、#8615、#8621、#8622、#8623、#8625、#8627、#8632、#8635、#8636、#8637、#8638、#8639、#8640、#8642）：relay／acp／mobile／desktop 的功能與修正，fork 在這些路徑沒有分歧碼，合併後隨 commit 軸進來。
+
+### Issue 軸（3 筆）
+
+- **#8618**（closed，completed）：Windows 版 Buzz Desktop 不顯示共享圖片（macOS 與 mobile 正常）。與本 fork 的 Windows 主線直接相關，但上游關閉時沒有留言或連結修正 commit，無從比對。觸發：維護者在 Windows 桌面版看到破圖，就到上游確認修正所在的版本與 commit。
+- **#8619**（open）：用戶端時鐘快幾十秒，媒體讀取 token 只容許 +5 秒偏差，圖片全部無聲失敗。尚無修正。觸發：上游出現修正 PR。
+- **#8641**（open）：mobile thread 檢視重複推入同一 thread。mobile，fork 不建置。不處理。
+
+### 水位
+
+`tools/upstream_baseline.json`：`reviewed_through` → `24a370606044c0c7be787cc2fd98ec0bfe1d606b`，`reviewed_pr_through` → 8643，`reviewed_issue_through` → 8641，`reviewed_date` → 2026-10-28。
+
+## 2026-10-29 上游差異初篩（未完成，不推進水位）
+
+固定快照 `24a3706..39b8b2b` 有 17 個新增 commit；PR 8644–8688 共 43 筆，新增 issue 為 #8674、#8684。清單、head 快照、初篩限制與驗證見 [本輪證據](UPSTREAM_REVIEW_2026-10-29.md)。
+
+本輪未採用產品變更：尚未完成 commit 逐筆採用審查與不可變 PR head 核對，亦無採用後 CI 證據。三個水位維持原值；路線圖列保留。維護工具完整 gate 通過（29 passed），不等於產品同步已驗收。
+
+既有條件變化：#8624 已關閉且未合併，不能再把它視為必然會合併的修補來源；#8643 仍開放。未擴大 advisory ignore，未宣稱任何安全告警已修復。沒有改動產品行為，符合 VISION.md 與 FORK.md 維持上游產品方向的約定。
+
+## 2026-10-30 接續上游逐筆裁決
+
+已接續上一節初篩；固定的 17 個 commit 逐筆裁決為 6 skip、11 defer，43 筆 PR 為 10 skip、33 defer，issue #8674、#8684 均 defer。逐筆完整 SHA、base、diff SHA-256、理由、重審條件及限制見 [正式裁決](UPSTREAM_REVIEW_2026-10-30.md) 與 [機器證據](UPSTREAM_REVIEW_2026-10-30.json)。11 個 PR head 已較初篩變動，使用本輪新 head，未沿用漂移 diff。
+
+沒有 adopt：pulldown-cmark 0.13.5 安全修補已在 fork，無需重複套用 #8644 的無關 syn 鎖檔變動；本批長行及 #8654 的長編碼／行內長空白依 UPSTREAM.md 拒收，不自行豁免文件、SQL、篩選式或公開向量；其餘變更依既有不自行分岔產品的政策延後，尚未做受影響平台／資料庫驗收。#8624 仍 closed、merged=false，路線圖改等替代修補或可相容的 selector 依賴鏈，不再單等該 PR。
+
+在 `pwsh -NoProfile -File tools/dev_check.ps1` exit 0（29 passed in 1.23s、OK）後，推進已審查水位：commit `39b8b2b6a6d065b3da981e096b1a3881f1c63fd4`、PR 8688、issue 8684、日期 2026-10-30。這不代表產品已同步；相對固定快照仍 ahead 46／behind 17，查詢時上游 main 又到 `f6d31d13e433da3c70158cc24f1107b2b2ca1143`，後續 commit 未納入。水位更新後再跑完整維護工具 gate，結果記於正式裁決。
+
+本輪只改文件／審查資料，不需採用後產品 CI；沒有宣稱 CI 已跑、任何告警已修復、維護者已驗收或 PR ready。完整產品同步與原生驗收仍列在 ROADMAP.md。
+
+## 2026-10-30 延伸至最新上游的增量裁決
+
+保留前輪完整裁決，另審 `39b8b2b6a6d065b3da981e096b1a3881f1c63fd4..6d719c680a85c98153324809988be37425fba73e` 的 15 個 commit（全部 defer），以及 PR #8689–#8699（2 skip、9 defer）。逐筆裁決及不可變 head 見 [正式裁決末節](UPSTREAM_REVIEW_2026-10-30.md#接續增量審至目前上游最新) 與 [增量機器證據](UPSTREAM_REVIEW_2026-10-30_INCREMENT.json)。#8689 closed 未合併不採用；#8692 的 548 字元說明行依既有長行規則拒收，其 relay→ACP 部署順序仍需後續整合驗證。#8699 除 duration 外新增 approval decide HTTP endpoint、改授權及 Node 工具鏈，不能按標題當小修採用。
+
+state=all 清單核對至最新 #8699，沒有 #8684 以上的新 issue；保留 #8674、#8684 的 defer。三軸最新已審查水位為完整 commit `6d719c680a85c98153324809988be37425fba73e`、PR #8699、issue #8684（最後一軸最新編號未變）。這只代表審查完成，不代表產品同步或安全告警解除；同步延後變更仍在 ROADMAP.md，不再把後續增量審查綁在平台／資料庫條件下。
+
+## 2026-10-30 Tauri 鎖檔 advisory 盤點
+
+依路線圖驗收標準執行 `cargo deny --manifest-path desktop/src-tauri/Cargo.toml check advisories`，重盤桌面鎖檔安全狀態：
+
+- **指令結果：exit 1（advisories FAILED）。** 失敗全數來自下列 8 筆 unmaintained（cargo-deny 預設把 unmaintained 視為 error）；yanked 與 unmatched ignore 只是 warning。桌面鎖檔不在 CI 掃描範圍（`_ci-security.yml` 只跑根 workspace），因此這個紅燈不影響任何 CI 檢查。
+- **Vulnerability / Unsound：0 筆。** 過去修補的 `tokio 1.54.1`（RUSTSEC-2026-0386）、`lru 0.18.2`（RUSTSEC-2026-0253）、`h2 0.4.16`（RUSTSEC-2026-0258）、`rtrb 0.3.5`（RUSTSEC-2026-0274）均維持修補後版本，無新增漏洞。
+- **Unmaintained：8 筆**（全部為既有觀察項，無安全漏洞）：
+  - `mach 0.1.2`、`mach 0.3.2`（RUSTSEC-2020-0168，經 `user-idle` 引入）
+  - `proc-macro-error 1.0.4`（RUSTSEC-2024-0370，經 `glib-macros` / `glib` / `gtk` / `tauri` 等引入）
+  - `unic-char-property 0.9.0`（RUSTSEC-2025-0081）
+  - `unic-char-range 0.9.0`（RUSTSEC-2025-0075）
+  - `unic-common 0.9.0`（RUSTSEC-2025-0080）
+  - `unic-ucd-ident 0.9.0`（RUSTSEC-2025-0100）
+  - `unic-ucd-version 0.9.0`（RUSTSEC-2025-0098，以上 unic 家族均經 `urlpattern` / `tauri-utils` 引入）
+- **Yanked crates（警告）：** `chacha20 0.10.1`、`clipboard-win 5.4.1`。
+- **Unmatched ignores（警告）：** 根目錄 `deny.toml` 中的 `RUSTSEC-2026-0253` 與 `RUSTSEC-2026-0381` 在桌面鎖檔無匹配項目。
+- **裁決：** 無新增漏洞，無需修改 `desktop/src-tauri/Cargo.lock`；不擴大 `deny.toml` 的既有 ignore，維持既有政策。
+
+
+## 2026-11-02 上游積壓逐筆裁決（commit `6d719c6 → d342cf1`；PR 8699 → 8920；issue 8684 → 8919）
+
+換上游檢查器正本後 `--strict` 回 exit 1，審 84 個 commit、195 筆 PR、15 筆 issue。全部取不可變證據：commit 用 `gh api repos/block/buzz/commits/<SHA>` 的 diff；PR 取 `pulls/<n>` 的 base／head SHA 與目前 head 的 diff；issue 用 state=all 清單。逐筆裁決、diff SHA-256、檔案清單與掃描命中在 [正式裁決](UPSTREAM_REVIEW_2026-11-02.md) 與 [機器證據](UPSTREAM_REVIEW_2026-11-02.json)。
+
+結果：commit 0 adopt／8 skip／76 defer；PR 0 adopt／55 skip／140 defer；issue 0 adopt／5 skip／10 defer。沒有 adopt，理由同 10-30：產品行為不自行分岔，而這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有原生與 Postgres 驗收環境。
+
+- **skip（拒收）8 個 commit、PR 中 29 筆**：新增行超過 400 字元、零寬／雙向控制字元或行內長空白，依 UPSTREAM.md 字面拒收。控制字元命中全在測試向量與驗證碼，看起來是刻意的同形字測試資料，但不自行豁免，同步時整批重審。
+- **skip（上游未收）**：closed 未合併的 PR，抽查標題與檔案沒有 Windows／CJK 專屬缺陷。#8918 的 diff 端點回空，因未被收下而 skip。
+- **issue #8856（Windows Desktop 連自架 relay 顯示「Can't reach the relay」）**：defer，已加 ROADMAP 中期列。上游沒有根因或修正，回報者已查到 `BUZZ_CORS_ORIGINS` 相關但仍間歇斷線；fork 沒有 Windows 桌面實機驗收環境。重審條件：上游釘出根因或修正 commit，或維護者在 Windows 桌面重現。
+- **issue #8794、#8889、#8845、#8919、#8761 skip**：分別是上游託管登入服務、push gateway、功能提案與無內容，fork 沒有對應服務。
+
+OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水位：commit `d342cf141cb3211c8e5a6c74f881cf1d39ad3b12`、PR 8920、issue 8919。這只代表審查完成，不代表產品同步或告警解除。
+
+## 2026-11-07 兩個紅燈 CI job 採用上游修補（#8711、#8922）
+
+遠端 `main` 有兩個 job 紅燈：Mobile (Android) 報 `The Java version used for the build is 25.0.5, which is incompatible with Gradle 8.14.5`（ubuntu-latest 已是 26.04）；Security / Dependency policy 報 RUSTSEC-2026-0433（pulldown-cmark 0.13.5）與 RUSTSEC-2026-0429（zip 8.6.0）。兩者都是上游已修的問題，不是 fork 自己的設計，所以逐字 `cherry-pick -s -x`：
+
+- **#8711 `c609d33e8`：defer 改 adopt。** 2026-11-02 裁決以「與 fork 的 workflow 修補衝突」為由 defer，但 `_ci-clients.yml` 沒有 fork 修補（無 `fork patch` 標記、不在 FORK.md 修補表），cherry-pick 零衝突。setup-java 維持上游釘的 v6.1.0（`b843ebf9b913`，已用 `gh api` 對 tag 核對）；隨後同一批推送再升到 v6.2.0（`77dd5b2ce225`，tag 已核對）：`Dependency freshness` 對 v6.1.0 會報 REVIEW UPDATE，而 Dependabot 沒有開對應 PR，留著只會多一筆落後。
+- **#8922 `c9b8f1176`：新項目，採用。** 在 `d342cf1` 之後，水位不動。pulldown-cmark 只是鎖檔升級（relay 唯一呼叫處用預設 `Parser::new`，本來就不碰 wikilinks）；zip 0429 ignore 沿用 0367／0368／0369 的理由與移除條件（mesh-llm 升 zip 9 後移除）。fork 內重新驗證該理由：`cargo tree -i zip@8.6.0 --locked` 顯示 zip 8.6.0 只經 `buzz-mesh-smoke` 的 dev-dependencies 進入根目錄鎖檔。
+- **驗證：** 本機 `cargo deny check advisories` 通過。遠端 CI 結果在推送前未知，不宣稱已綠。
+- **未處理：** `desktop/src-tauri/Cargo.lock` 另有 zip 8.6.0，CI 的 `cargo-deny check` 只掃根目錄鎖檔；沿用 2026-10-30 Tauri 鎖檔 advisory 盤點的處理方式，下次盤點時一併看。
+
+## 2026-11-07：要裝 Playwright 的兩個 desktop E2E job 釘 `ubuntu-24.04`
+
+- 現象：`44fccec71` 改了 workflow，觸發 Desktop Smoke E2E（10 個 shard）與 Desktop E2E Integration（3 個 shard）。全部在 `Install Playwright Chromium` 失敗：`ERROR: Playwright does not support chromium on ubuntu26.04-x64`，runner image 是 `ubuntu26/20261101.186`。
+- 上游同樣跑在 ubuntu-26.04、同樣鎖 Playwright 1.60.0，卻是綠的（run 42342795419）。原因是 `Restore Playwright browser cache` 命中，跳過了安裝步驟。fork 沒有這份快取，所以一定會失敗；上游的快取被清掉後也會失敗。
+- 裁決：只把這兩個 job 的 `runs-on` 改成 `ubuntu-24.04`，加上 `fork patch (SanHsien/buzz)` 標記並登記到 FORK.md。不在 fork 自行升級 `@playwright/test`：本 fork 產品依賴跟隨上游，Playwright 1.65.0 雖已支援 ubuntu26.04，仍等上游升級。
+- 移除條件：上游鎖到支援 ubuntu26.04 的 Playwright 後，同步時改回 `ubuntu-latest` 並刪掉這條修補。
+
+
+## 2026-11-07 依賴新鮮度：沿用 2026-10-26 規則重新延後，另有三項技術性延後
+
+`Dependency freshness` 在 main 紅燈（2026-11-01 排程失敗；本機 18 列 `REVIEW UPDATE`）。本 fork 沒有「開始自己維護產品依賴」的維護者決定，所以 2026-10-26 的規則（宣告下限與上游持有的 workflow pin 不升，`FORK.md` 的「manifest 宣告不動」）仍然適用；上游 `block/buzz` main 在這 18 列也沒有任何一列比本 fork 新，沒有可跟的版本。試升過的一版（action pin、npm、kube／rmcp／toml）已全部還原，不留在樹裡。
+
+**重新延後（`deferredLatest` 改為目前 registry 最新，理由沿用 10-26 文字並註明 2026-11-07 重審）：** `@mediapipe/tasks-vision` 1.2.2、`jsdom` 31.0.0、`motion` 14.10.1、`vitest` 5.1.0、`kube` 5.0.0、`k8s-openapi` 0.29.0、`rmcp` 3.9.0、`toml` 1.2.1、`docker/login-action` 4.8.0、`helm/kind-action` 1.15.2、`pnpm/action-setup` 6.1.1、`github/codeql-action/init`／`analyze` 4.39.3、`taiki-e/install-action` 2.90.2（保留原本較長的理由與觸發條件：上游升 pin 隨同步帶入，或 fork 開始自己維護 CI workflow）。
+
+**新增三項有技術理由的延後（寫在 `.github/dependency-deferrals.json`，各自附觸發條件）：**
+
+- `nostr` 0.44 → 0.45.7：0.45 移除 crate 根的重新匯出（`nostr::Event`、`Keys`、`PublicKey`、`Kind`、`Tag`、`Filter`、`SECP256K1`、`nostr::secp256k1`、`nostr::hashes`）。試升後單單 `buzz-core` 就 55 個解析錯誤；404 個 `.rs` 檔、25 個 workspace crate 加 Tauri 都在用；上游仍是 0.44。這個理由同樣適用於 kube 5（連帶 k8s-openapi 0.29 移除 `v1_31` feature）與 rmcp 3（`buzz-agent` 的 `Content` API 改名）：升了就是分岔產品碼。
+- `rusqlite` 0.40 → 0.41.1：無法解析。0.41 需要 `libsqlite3-sys 0.39`（`links = "sqlite3"`），而 `mesh-llm-log-store`（git tag `v0.76.2`）要求 rusqlite ^0.40；一個依賴圖只能有一份 sqlite3 原生連結，`cargo update` 直接失敗。觸發：Tauri `Cargo.toml` 釘的 mesh-llm tag 換到依賴 rusqlite 0.41 的版本。
+- `virtua` 0.49.3 → 0.54.2：`patches/virtua@0.49.3.patch` 改壓縮後的 `lib/index.{cjs,js}` 並把 `itemSize` 型別放寬成函式；0.54.2 內部已重排且 `itemSize` 仍只有 `number`，補丁套不上也沒有上游等價。上游仍釘 0.49.3 加同一個補丁。
+
+**試升時順便得到的資訊（供日後上游升級時參考，不是本 fork 的變更）：** jsdom 30 起 engines 為 `^24.15.0`（hermit 是 24.15.0，Windows build job 釘 24.14.1）；`pnpm update` 升 jsdom 31 時 `parse5-parser-stream@8.1.0` 會沿用舊鎖的 `parse5@8.0.1` 而缺 `flushCharacters`，需 `pnpm dedupe`；motion 14.10.1 發佈不足一天會讓 pnpm 往 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude`；Node 25+ 的內建 `localStorage` 會讓 `test-jsdom-setup.mjs` 的 jsdom 測試失敗（Node 24 正常）；kube 5 的 `Time` 由 chrono 改 jiff、`Error::Api` 改 `Box<Status>`；rmcp 3 的 `Content`／`RawContent` 合併為 `#[non_exhaustive]` 的 `ContentBlock`。
+
+**`deny.toml` 的 `RUSTSEC-2026-0381` ignore** 目前沒有匹配任何 crate（cargo-deny 警告 unmatched）。沒有移除：它是上游自己的 ignore，移除與否屬上游；下次同步上游時再看。
+
+## 2026-11-08 安全告警處理：能修的修、沒有動作可做的關
+
+維護者指示「告警沒必要開著的就關」。原則：告警要嘛驅動一個動作，要嘛關掉並寫下理由與重審觸發條件；修得了的先修，不拿關閉當捷徑。manifest 宣告與上游持有的 workflow／產品碼不動（`FORK.md`），所以「修」只限相容的鎖檔刷新。關閉告警的註解上限 280 字元，詳細理由在這裡。
+
+**修（鎖檔刷新；推上 `main` 後 Dependabot 自動結案）：**
+
+- `benchmarks/harbor-buzz-orchestra/uv.lock` 與 `testbed/uv.lock`：上游 `block/buzz` main 沒有升這兩份鎖（取得 `upstream/main` 後比對版本相同），所以自己 `uv lock --upgrade-package` 刷新 PyJWT、aiohttp、anyio、certifi、cryptography、datasets、filelock、fsspec、h2、litellm、multidict、urllib3，只動鎖檔、不動 `pyproject.toml`。逐筆用 `vulnerable_version_range` 對新版本核對：所有 pip 告警（85 筆含 PyJWT 兩筆「無修補版本」，其範圍 ≤ 2.13.0）新版本都落在範圍外。`filelock` 要求 `>=4.2.1`，但 litellm 1.108.2 限制 `filelock<4`，所以讓 litellm 降到 1.103.10（仍高於告警的修補版 1.95.0）。上游的主鎖指向 Block 內部 registry（`global.block-artifacts.com`），外部無法解析；`uv lock` 會把整份鎖改成 `pypi.org`，所以主鎖 diff 很大但實質只是版本與 registry 位址。同步上游時這兩份鎖的衝突一律取上游再重做。驗證：`pytest` 90 過、1 失敗（`test_composed_system_prompt_carries_persona_and_team_roster` 斷言 POSIX 檔案權限 0o600，在 NTFS 上本來就不成立，與鎖檔無關）。
+- `pnpm-lock.yaml`：`@tiptap/*` 3.22.5 → 3.30.5、`prosemirror-view` 1.41.8 → 1.42.9、`linkifyjs` 4.3.2 → 4.4.0（連帶 prosemirror-model／transform 等，另有遞移依賴 `@babel/runtime` 7.29.13、`fast-equals` 5.4.5、`use-sync-external-store` 1.7.0）。**不能只升 tiptap**：`extension-link` 會帶進第二份 `linkifyjs` 4.4.0，而 `desktop/package.json` 直接依賴的是 4.3.2，兩份實例各自持有 linkify 的協定登錄，`composerLinkPastePipeline.test.mjs` 的 5 個測試全紅（「Link's onCreate to register the buzz protocol」）。把 `linkifyjs` 一起刷新到 4.4.0 讓整棵樹只剩一份後 5/5 轉綠。作法：`pnpm update` 後還原 `desktop/package.json`，再 `pnpm install --no-frozen-lockfile`；manifest 宣告不動。驗證：`pnpm install --frozen-lockfile`、`pnpm typecheck` 通過、`pnpm test` 第一階段 6834／6834 過。第二階段 jsdom 有 7 筆失敗（`useManagedAgentActions.relayRemoved.jsdom-test.mjs`），還原成舊鎖後同一檔同樣失敗，所以是本機 Node 26 的既有問題（見 2026-11-07 條目 Node 25+ 內建 `localStorage`），不是這次刷新造成。
+
+**關（Dependabot，tolerable_risk）：**
+
+- `zip` 10 筆（根 `Cargo.lock` 5、桌面鎖 5）：根鎖的 zip 8.6.0 只經 dev-only 的 `buzz-mesh-smoke` → mesh-llm 進來，`deny.toml` 已為 0367／0368／0369／0429 留下理由。桌面鎖另有 zip 8.6.0（同樣經 mesh-llm，手動複製條目、從不呼叫 `extract`）與 zip 4.6.1（`tauri-plugin-updater` 2.10.1，Windows 路徑會 `extract`，但在 `updater.rs:712` 先以 app 內嵌公鑰驗 minisign 簽章，檔案內容由發佈者掌控）。`buzz-desktop` 自己用 zip 9.0.5。修法要 mesh-llm 與 tauri-plugin-updater 各自升級。重審：mesh-llm#2471 釋出、tauri-plugin-updater 換 zip。
+- `rmcp` 12 筆（根鎖 4、桌面鎖 4、`crates/buzz-agent/Cargo.toml` 4）：修補版是 2.x 大版本，宣告由上游持有（2026-11-07 已重新延後，另見該條目 rmcp 3 的 API 改名）。告警涉及 OAuth metadata 探索、streamable-HTTP 伺服器 session 表、自訂 HTTP header 轉址洩漏，這些都要啟用對應 feature；實際啟用的是 `client`＋`transport-child-process`（buzz-agent）與 `server`＋`transport-io`＋`macros`（根 workspace），都沒有 HTTP 傳輸與 OAuth。重審：上游升 rmcp。 **2026-11-10 更新：** 上游 `658253009`（#9287）把根鎖 rmcp 3.4.1 升到 3.9.0 並採用，見 2026-11-10 條目；buzz-agent 的 rmcp 1.8 與桌面鎖仍待上游。
+- `glib` 1 筆：`cargo tree --target x86_64-pc-windows-msvc -i glib` 為空，只在 Linux GTK 圖（gtk／atk／tray-icon，經 tauri）。修法是 gtk-rs 0.20，要 tauri 升級。重審：上游升 tauri。
+- `postcss-selector-parser` 1 筆：6.0.10 是 `@tailwindcss/typography` 0.5.20 的精確版本依賴，不是刷新鎖檔能動的；公告明說受信任來源的建置期使用不受影響，runtime 沒有解析不受信任選擇器。重審：typography 升版或換成依賴 ≥6.1.5。
+
+**關（CodeQL Rust，100 筆）：** 逐筆依路徑與 `#[cfg(test)]` 區間判定，沒有發現產品碼的真實問題，所以沒有任何一筆用 `won't fix`。
+
+- `used in tests` 88：`tests/`、`examples/`、`*_tests.rs`、smoke crate 與 `#[cfg(test)] mod` 內的測試值（hard-coded-cryptographic-value 61、cleartext-logging 20、log-injection 4、non-https-url 3）。
+- `false positive` 12：`pairing/crypto.rs:55`（HKDF 依規格使用空 salt，金鑰材料是隨機 session secret）、`pairing/session.rs:125`、`push-gateway/grant.rs:61`、`token.rs:73`（零初始化緩衝區馬上被 `rand::fill`／`OsRng` 覆寫）、`buzz-admin/main.rs:191`（`generate-key` 指令的輸出本來就是新產生的私鑰）、`buzz-pairing-cli/main.rs:131`（列印給使用者自己看的 QR URI，訊息已警告勿外流）、`reconcile.rs:218/270/274`（記錄 Kubernetes Secret 的名稱，不是內容）、`apns.rs:129`（正式 base URL 寫死為 https，http 只在測試建構子）、`jwks/mod.rs:698`（公開 JWKS 強制 https，http 只在密封的 mesh 傳輸契約內）、`git/transport.rs:1030`（command-line-injection，見下）。
+- `command-line-injection`（`crates/buzz-relay/src/api/git/transport.rs:1030`）：`service` 來自查詢參數，但在 `:918-920` 先對 `git-upload-pack`／`git-receive-pack` 做精確白名單；子命令只由 `strip_prefix("git-")` 得出；`Command::new("git")` 以分開的引數呼叫（不經 shell）；`repo.path()` 是伺服器建立的暫存目錄；`harden_git_env` 清空環境。判斷為誤報。
+- 流程備註：一開始 `comm` 因排序方式不同把 4 筆誤報當成 `used in tests` 一起關掉，發現後重新開啟並以正確理由重關（`pairing/crypto.rs:55`、`session.rs:125`、`grant.rs:61`、`token.rs:73`）；最終分佈已用 API 讀回核對。
+
+**沒處理：** 非 Rust 的 code scanning（JS 測試檔的 regex／sanitization、`actions/*` workflow 權限與 checkout、`py/clear-text-storage`，派工時估 53 筆，實際查到 49 筆，見下一節）不在這輪範圍；`actions/*` 與 workflow 屬上游持有檔，其餘待另行分類。
+
+## 2026-11-08（續）非 Rust 的 code scanning 告警（49 筆：關閉 48、#22 維持 open）
+
+同日前一輪處理完 Rust 的 100 筆；這輪處理其餘 49 筆，逐筆讀過程式碼與 workflow 後判定：關閉 48 筆（used in tests 24、false positive 6、won't fix 18），js/redos #22 是真問題，維持 open。沒有改任何檔案：這些告警所在的 workflow 與產品碼都由上游持有（`FORK.md`），fork 不修。
+
+- **`used in tests` 24**：`*.test.mjs`／`*.jsdom-test.mjs` 內的 regex、URL 子字串與 sanitization 斷言（js/incomplete-multi-character-sanitization 7、js/incomplete-url-substring-sanitization 8、js/regex/missing-regexp-anchor 5、js/incomplete-sanitization 1、js/insecure-temporary-file 1），加上 benchmark 測試台腳本 `benchmark.py` 的 `py/clear-text-storage-sensitive-data` 3 筆（產生一次性本機測試憑證，檔案以 0600 建立）。
+- **`false positive` 6**：`AgentCreationPreview.tsx:743/881`（React `<img src>` 屬性綁定，不是 HTML sink）；`ProjectReadmePanel.tsx:41/50`（README 轉成 Markdown 文字後由 react-markdown／remark 渲染，沒有 rehype-raw，遺留的 `<script` 是惰性文字；`decodeHtmlEntities` 先解 `&amp;` 屬於顯示文字的小瑕疵，不是注入）；`build-protected-feature-artifacts.mjs:63`（建置腳本讀自己剛產出的目錄，沒有攻擊者可控路徑）；`web/.../nostr-client.ts:91`（NIP-42 協定本身：只對已選定的 wsUrl 簽 AUTH 挑戰，惡意 relay 只能拿到對它自己 URL 有效的簽章）。
+- **`won't fix` 18**（另有 js/redos 1 筆維持 open，列在本節最後）：
+  - `actions/missing-workflow-permissions` 11（`ci.yml` 10、`_ci-clients.yml` 1）：上游原樣的 workflow；`_ci-clients.yml` 只有逐字帶入的 cherry-pick，沒有 fork 自己的設計。fork repo 的預設 `GITHUB_TOKEN` 權限是 `read`（`gh api .../actions/permissions/workflow` 已核對），所以缺少明確 `permissions:` 的實際權限仍是唯讀。
+  - `actions/untrusted-checkout/medium` 5（`release.yml`）：觸發條件是 `desktop-v*` tag push，不是 PR；每個 job 都以 `github.repository == 'block/buzz'` 為前提（或 `needs: setup` 連帶跳過），在 fork 上不會跑。
+  - `actions/untrusted-checkout/high` 與 `...-toctou/high` 各 1（`codex-security-review.yml`）：確實是 `pull_request_target`，但所有 job 以 `github.repository == 'block/buzz'` 為前提，在 fork 上整支 workflow 不會執行；checkout 是唯讀、`persist-credentials: false`、有 head SHA 比對，並且只在隔離的唯讀 job 內檢視。結論：在這個 fork 上沒有 PR 程式碼帶 secrets 執行的路徑。
+  - `js/redos` 1（`desktop/src/features/huddle/lib/ttsLiveMessages.ts:50`）：**真問題，告警維持 open（#22，2026-11-08 由維運長重新開啟）**：上游 `block/buzz` main 同一行仍未修，可在 TTS 讀出帶媒體連結的 agent 訊息時觸發；依維護者「能修就修、真問題不關」的原則，不以 won't fix 關閉。觸發：上游修正後跟進，或維護者決定在 fork 先修。正規式 `(^|\n)\s*\|\|\s*\n(?:\s*\n)*\s*\|\|\s*(?=\n|$)` 的 `\s*\n` 與 `(?:\s*\n)*` 因 `\s` 含 `\n` 而歧義，實測 `"||" + "\n"×n + "x"` 耗時 n=20 為 10 ms、n=24 為 173 ms、n=26 為 728 ms，呈指數成長。觸及條件：agent 訊息帶媒體 URL tag 且進入即時 TTS 才會走到這行。重審：同步上游時看該行是否改寫；或上游收到回報後修正。
+
+## 2026-11-08（再續）tiptap 3.30.5 刷新讓 main 的 Desktop Smoke E2E 變紅：根因與修法
+
+`6bb49dbd0` 把 `@tiptap/*` 刷到 3.30.5（關 Dependabot #112、#114；`prosemirror-view` 1.42.9 關 #116）之後，run 42405563759 的 Desktop Smoke E2E (5)、(10) 紅，重跑仍紅（`6bfb6f6b9` 是綠的）。本機用 Playwright 1.60 重現（`virtualization.spec.ts:102` 同樣紅），頁面落到 error boundary，console 為 `TypeError: Cannot read properties of null (reading 'commands')`。
+
+**根因（兩件事，只有第一件造成紅燈）：**
+
+- `@tiptap/core` 從 3.23.1 起（3.22.5 沒有、3.23.1 有，用 npm tarball 逐版核對）在 `Editor.destroy()` 把 `commandManager` 設成 `null`，之後 `editor.commands` 會直接丟錯（`editor.chain()`／`can()` 則回傳惰性物件）。`desktop/src/features/messages/lib/useRichTextEditor.ts` 的 `clearContent`／`setContent`／`focusEnd`／`focusPreserve` 以 `editor.commands.*` 呼叫；草稿還原與送出流程（`useDraftPersistSnapshot` 的 effect 等）會對已經被 `useEditor` 卸掉的 editor 呼叫它們。3.22.5 銷毀後這些呼叫是安靜的 no-op，3.30.5 變成未捕捉的 render 例外，整棵樹被 error boundary 取代，所以 composer 所在的頁面（Pulse、workflow、inbox、mention、invites）全部連帶紅。這是上游產品碼與新版 tiptap 的相容性缺口，上游一旦升 tiptap 也會撞上（本機 `upstream/main` `f3b127e3a` 的鎖仍是 3.22.5）。
+- 另一個獨立瑕疵：`@tiptap/react` 把 `extension-bubble-menu`／`extension-floating-menu` 宣告為 `^3.30.5` 的 optionalDependencies，鎖檔刷新時浮到 3.33.0，但它們的 peer 是**精確版**（3.33.0 要 `@tiptap/core` 3.33.0），與鎖裡的 core／pm 3.30.5 不一致。這組不一致本身不是這次紅燈的原因（把它們對齊到 3.30.5 後紅燈依舊），但是不一致的版本組合，所以一併修掉。
+
+**修法（鎖檔對齊＋最小的產品碼防護，三個安全告警維持關閉）：**
+
+1. `pnpm-lock.yaml`：`extension-bubble-menu`、`extension-floating-menu` 3.33.0 → 3.30.5，整組 `@tiptap/*` 回到同一版。不加 `overrides`（`pnpm-workspace.yaml` 由上游持有），只動鎖檔；`pnpm install --frozen-lockfile` 通過，`pnpm install --no-frozen-lockfile` 不會再把它們浮上去（已鎖定版本滿足範圍）。新增 `desktop/scripts/tiptap-lock-alignment.test.mjs`：鎖檔裡所有 `@tiptap/*` 必須同一版，混版時紅（用上一版鎖檔驗證會紅）。
+2. `useRichTextEditor.ts` 的 `clearContent`／`setContent`／`focusEnd`／`focusPreserve` 改用 `editor.chain().<cmd>().run()`：指令相同，editor 已銷毀時是惰性 no-op，不丟錯。**這是 fork 對上游產品碼的修補**（`FORK.md` 已列入）；同步上游時衝突以上游為準，上游若自己補了防護就丟掉這份。回貢與否屬維護者決定，沒有對上游開任何東西。
+
+**考慮過、沒採用：** 退回 tiptap 3.22.5。可以不動產品碼，但 `@tiptap/core` < 3.30.4／3.30.5 會讓 #112（`mergeAttributes()` 的 `__proto__`）與 #114（Markdown 屬性解析的二次方 ReDoS）重新開啟；沒有任何 ≥ 3.30.5 的版本保留舊行為（3.23.1 之後全部相同），所以「升到另一組一致版本（例如整組 3.33.0）」也不能解。若維護者寧可不碰產品碼，退路是鎖回 3.22.5 並把 #112、#114 以 tolerable_risk 關閉：#114 的程式碼路徑在 `@tiptap/core` 的 `MarkdownManager`，本 repo 用的是第三方 `tiptap-markdown`，不載入它；#112 需要攻擊者控制的 attrs 物件帶 own `__proto__` key，本 repo 沒有找到這樣的入口（未做完整的可達性審計）。
+
+**驗證（本機 Windows、Playwright 1.60；CI 是 ubuntu-24.04，沒有在本機跑 Linux）：** 退回 `6bfb6f6b9` 的鎖＋原產品碼時 `virtualization.spec.ts:102` 綠；`6bb49dbd0` 的鎖時紅；只對齊 bubble／floating-menu 仍紅；加上 `chain()` 防護後 CI 列出的 7 條都綠（`virtualization:102`、`:201`、`workflows:297`、`mention-recipients:122`、`inbox-edit:560`、`invites-settings-screenshots:39` 綠；`workflow-local-controls:151` 的行為斷言全過，只剩視覺快照因為 repo 只提交 linux 快照、本機缺 `-win32.png` 而報「snapshot doesn't exist」，與修補無關，產生的檔案沒有提交）。`pnpm typecheck` 過；`pnpm test` 第一階段 6835／6835（含新測試），第二階段 jsdom 仍是本機 Node 26 的既有 7 筆失敗（`relayRemoved`、`legacyCommunityReadmit`，兩檔都只涉及 relay 重新收錄，與編輯器無關）。`virtualization.spec.ts:247` 在本機同樣紅（捲動位移 120 < 200），退回 `6bfb6f6b9` 的鎖＋原碼也一樣紅，是本機 Windows 滾輪行為，不是這次造成，CI 上它是綠的。
+
+## 2026-11-10 上游積壓逐筆裁決（commit `d342cf1 → 44b3c48`；PR 8920 → 9312；issue 8919 → 9299）
+
+`Upstream check`（2026-11-09）紅燈，`--strict` 回 exit 1：238 個 commit、360 筆 PR、25 筆 issue。證據取法同 11-02：commit 用 `gh api repos/block/buzz/commits/<SHA>` 的 diff，PR 取 `pulls/<n>` 的 base／head SHA 與目前 head 的 diff（360 筆的 head 與 `gh pr list` 當下一致，檔案數與 metadata 一致），issue 用 state=all 清單內文。逐筆裁決、diff SHA-256、檔案清單與掃描命中在 [正式裁決](UPSTREAM_REVIEW_2026-11-10.md) 與 [機器證據](UPSTREAM_REVIEW_2026-11-10.json)。
+
+結果：commit 2 adopt／32 skip／204 defer；PR 2 adopt／75 skip／283 defer；issue 0 adopt／14 skip／11 defer。
+
+- **adopt 兩筆：** `c9b8f1176`（#8922）不是新決定，11-07 已因 Security / Dependency policy 紅燈 cherry-pick 進 fork（`e74c2e4e3`），它在 `d342cf1` 之後，所以水位推進時才算進這批。`658253009`（#9287）是這次新採用：rmcp 3.4.1 → 3.9.0（修 HTTP client、server cache、OAuth 公告），並在 `deny.toml` 加 RUSTSEC-2026-0459（SQLite，僅 mesh smoke 測試台的私有本機 log 資料庫）與 RUSTSEC-2026-0462（rmcp 1.8，僅 buzz-agent 子行程 client，HTTP transport feature 關閉）兩條帶理由的 ignore 與 bans 圍欄。做法同 #8922：`git cherry-pick -x -s`，`Cargo.lock` 與 fork 的鎖檔升級衝突，保留 fork 的鎖檔，套件集合只換了 `rmcp`、`rmcp-macros` 3.4.1 → 3.9.0（`cargo update -p rmcp@3.4.1 --precise 3.9.0`）；`libc`、`sha2 0.11.0` 是 rmcp 3.9.0 新增的相依邊，不是新套件；`cargo update` 另把三條相依邊改指向鎖檔裡已有的較舊版本，與上游 `658253009` 一致：`data-encoding-macro-internal` 0.1.18 的 syn 2.0.117 → 1.0.109、`iana-time-zone` 0.1.65 的 windows-core 0.62.2 → 0.61.2、`wmi` 0.18.4 的 windows／windows-core 0.62.2 → 0.61.3／0.61.2；`deny.toml` 無衝突，fork 的 RUSTSEC-2026-0253 ignore 與標記保留。`Cargo.toml` 沒動（`crates/buzz-dev-mcp` 宣告 `rmcp = 3.4.1` 本來就相容 3.9.0）。驗證：本機 `cargo deny check` 為 `advisories ok, bans ok, licenses ok, sources ok`（exit 0；`RUSTSEC-2026-0381` 仍報 advisory-not-detected 警告，是既有狀況）；`cargo check -p buzz-dev-mcp --locked` exit 0（編譯 rmcp 3.9.0 的消費者）；`pytest tests/fork` 通過。未跑完整 workspace 建置與 Tauri 閘門，也沒有遠端 CI 結果，不宣稱 push 後 Security / Dependency policy 一定綠；buzz-agent 的 rmcp 1.8 沒有編譯驗證（本 commit 沒動它）。
+- **其餘為什麼不採用：** 產品行為與上游相同（FORK.md），這批橫跨行動端、桌面端、relay 與資料庫，fork 沒有原生與 Postgres 驗收環境；fork `main` 最新一次 CI、CodeQL、Docker image、helm chart、Sprig 皆 success，沒有像 11-07 那樣的紅燈。
+- **skip 的意思是同步時重審：** 已併入上游 main 的 skip 項，日後 fast-forward 同步仍會進來。`96af488d9`／#9077（私有頻道附件存取撤銷，存取控制修正）只因長行被拒，同步時優先重審。
+- **skip（拒收）commit 32、PR 75：** 新增行超過 400 字元、零寬／雙向控制字元或樣式命中，依 UPSTREAM.md 字面拒收、不自行豁免；加上 closed 未合併的 PR。控制字元與動態執行樣式的命中逐筆讀過（Unicode 測試向量、Rust 對 Redis 腳本的 `eval(` 呼叫、文件裡的 GitHub URL、emoji ZWJ 測試字串），同步時整批重審。
+- **ROADMAP 觸發條件逐條對照，只有 rmcp 那條部分成立：** `658253009` 升了 rmcp 3，觸發「隨上游遷移 rmcp、glib 與 lru 依賴鏈」與本檔 11-08 Dependabot 條目的「rmcp 12 筆」重審條件，已處理 rmcp 3 的部分（根鎖的 3.4.1 → 3.9.0）；沒處理的：buzz-agent 的 rmcp 1.8（上游用 ignore 0462 圍起來，沒有遷移）、`desktop/src-tauri/Cargo.lock` 的 rmcp（上游沒動），所以該 ROADMAP 列保留。其餘沒有成立：#8856 仍 OPEN 且無新修正；#8643 仍 OPEN；`ttsLiveMessages.ts` 與 `useRichTextEditor.ts` 在範圍內沒被動到；上游 `Cargo.lock` 仍有 `webpki-roots 0.26.11`；範圍內動 `deny.toml` 的是 `c9b8f1176` 與 `658253009`，兩者都已採用。
+- **同步時要處理的 fork 衝突點：** `.github/workflows/_ci-relay.yml`（fork 的 `ubuntu-24.04` 釘）被 `0a06c0b3c`、`b6d440314`、`96af488d9` 動到；`docker.yml`（owner guard）被 `e8a4bc159`（#9310）動到；`deny.toml` 被 `c9b8f1176`、`658253009` 動到（fork 的 RUSTSEC-2026-0253 ignore 已保留）；`3e9d2e90c`（#9303）只新增 `docker-manual.yml`、不動 `docker.yml`，但它是新的發佈映像 workflow，同步時要補非 `block` owner 不 push 的 guard，否則 `tests/fork` 的發佈 job 檢查會紅。上游鎖檔變動與 fork 的鎖檔升級衝突時以上游為準再重做。這次對上游持有檔的改動只有 `Cargo.lock`（rmcp）與 `deny.toml`，兩者本來就在 FORK.md 的修補表。
+- **合進非 main 分支的 PR：** #9000、#9020、#9078、#9175、#9232、#9289、#9294 狀態 MERGED 但 base 是 `mobile-v0.27` 或功能分支，不視為已經 commit 軸抵達。
+
+OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水位：commit `44b3c4823f0cf1f7715f85dbf5566cb64e848162`、PR 9312、issue 9299。這只代表審查完成，不代表產品同步或告警解除。
+
+## 2026-11-11 獨立覆核補洞：rmcp／SQLite 只修了根 workspace（覆核發現）
+
+獨立覆核 11-10 採用 #9287（rmcp 3.9.0）後指出：升級與 `deny.toml` 的 ignore 理由都只對根 workspace 成立，`desktop/src-tauri`（獨立 workspace、自己的 `Cargo.lock`）沒跟上。五個缺口，各自一個 commit，以下逐條記。
+
+**B3（中）桌面鎖的 rmcp 3.2.0。** `mesh-llm-host-runtime`、`mesh-llm-plugin`（v0.76.2，`mesh-llm` feature 才進圖，canary 會開）帶進 rmcp 3.2.0，落在 RUSTSEC-2026-0462（<3.9.0）、0457（OAuth SSRF，2.0.0–3.7.0）、0461（3.0.0–3.6.0）範圍。修法：在 `desktop/src-tauri` 跑 `cargo update -p rmcp@3.2.0 --precise 3.9.0`，不動任何 manifest 與 git 依賴（mesh-llm 的 rmcp 約束允許 3.9.0）。lock 變動：`rmcp`／`rmcp-macros` 3.2.0 → 3.9.0，新增 `process-wrap 10.0.1`（rmcp 3.9.0 的相依；舊的 9.1.0 仍被另一個 crate 使用），rmcp 另多 `libc`、`sha2 0.11.0` 兩條邊；`cargo update` 重新解析時順帶把 `windows-sys`／`windows`／`windows-core` 數條相依邊改指向鎖檔內已有的版本（與 11-10 根鎖的同類附帶變動相同，沒有新套件）。
+- 測試：`tests/fork` 新增 `test_tauri_lock_has_no_unpatched_rmcp_3_which_cargo_deny_never_checks`（桌面鎖任何 2.x 以上的 rmcp 必須 >= 3.9.0；1.8.0 由 buzz-agent 另案）與 `test_the_rmcp_lock_check_flags_the_release_the_review_found`（對舊鎖的 3.2.0 會報）。修前舊鎖回 `['3.2.0']`。
+- 驗證：`cargo metadata --locked` 通過；`cargo check --locked --features mesh-llm --keep-going`（桌面）編譯了 `rmcp 3.9.0`、`mesh-llm-plugin`、`mesh-llm-plugin-manager`、`mesh-llm-host-runtime`、`wmi`，唯二失敗是 `opusic-sys` 與 `buzz-desktop` 的 build script（本機沒有 `cmake`，同 10-30 紀錄），交給 CI 的 Desktop Tauri；這不是完整 Tauri 建置，不宣稱已綠。
+
+**B2（中）桌面鎖的 libsqlite3-sys 0.38.2（RUSTSEC-2026-0459）沒有任何掃描，根目錄 ignore 的理由對桌面不成立。** 桌面的 `rusqlite 0.40.2`（`bundled`）是 `buzz-desktop` 的直接、非 optional 依賴，預設建置就連結 SQLite 3.53.2；根 `deny.toml` 寫的「只在 mesh log store」只對根 workspace 為真。實查：app 開的資料庫都在自己的 nest／app data 目錄（`nest/archive/archive.db`、retention db、`channel-head-cache.db`、`observed-unread` db），沒有使用者指定或匯入的路徑；`archive/store.rs` 對每條連線設 `journal_mode=WAL`，所以 `-wal` 路徑**有**用到，漏洞前提（別人寫的資料庫＋`-wal` 配對）仍不成立；唯一讀外部檔案的是 `commands/legacy_storage.rs`，唯讀開 app 自己舊 WebView 的 localStorage 資料庫。不能單獨升 rusqlite 0.41：`libsqlite3-sys` 是 `links = "sqlite3"`，桌面要與 mesh-llm v0.76.2 的 `mesh-llm-log-store`（`rusqlite ^0.40`）共用同一版。退出條件：mesh-llm 升 rusqlite 0.41 後兩邊一起升。
+- 修法：新增 `desktop/src-tauri/deny.toml`，`_ci-security.yml` 加一步 `cargo-deny --manifest-path desktop/src-tauri/Cargo.toml --all-features --config desktop/src-tauri/deny.toml check advisories bans sources`（`--all-features` 因為 canary 開 `mesh-llm`，沒開時 zip 8、rmcp 3.9.0、mesh-llm-* 都不在圖裡）。licenses 不在桌面檢查範圍（許可清單與 clarify 在根檔）。根 `deny.toml` 的 0459 註解改成只對根 workspace 成立並指向桌面檔。
+- 第一次跑桌面檢查掃出的其他項目，一併處理：**RUSTSEC-2026-0365（`negentropy` 0.5.0，遠端 DoS，修補版 >=0.5.2）是真的缺口**——`nostr-sdk 0.45.1` 帶進來，根鎖已是 0.5.2——用 `cargo update -p negentropy --precise 0.5.2` 修（僅此一個套件，不動 manifest）。其餘（`quick-xml 0.38.4` 0194／0195、`ringbuf` 0293、`zip` 4.6.1／8.6.0 的 0367／0368／0369／0429、`rmcp 1.8.0` 的 0462、zbus 系列 0370–0372、`instant`、`paste`、`unsafe-libyaml`，以及桌面獨有的 `mach`、`proc-macro-error`、`unic-*` 五個）都是 unmaintained 或理由同根檔的例外，逐條寫理由與退出條件在桌面 `deny.toml`；`zip 4.6.1` 是 `tauri-plugin-updater 2.10.1`（會 extract，但先以 app 內嵌公鑰驗 minisign 簽章），`zip 8.6.0` 是 mesh-llm（手動複製、不呼叫 `extract`）。`bans` 圍欄照根檔：rmcp <3.9.0 只允許 `buzz-agent`、HTTP feature 禁用；rusqlite／libsqlite3-sys 舊版只允許既有路徑；ringbuf 只允許 neteq。
+- 測試：`test_desktop_workspace_has_its_own_dependency_policy_that_ci_runs`（桌面政策存在、0459 帶 WAL 說明與 rusqlite 0.41 退出條件、workflow 真的跑它且帶 `--all-features`）、`test_root_sqlite_ignore_does_not_claim_to_cover_the_desktop_workspace`。
+- 驗證：`cargo deny --manifest-path desktop/src-tauri/Cargo.toml --all-features --config desktop/src-tauri/deny.toml check advisories bans sources` 為 `advisories ok, bans ok, sources ok`（預設 feature 也 ok）；`cargo metadata --locked`（桌面）通過；根目錄 `cargo deny check` 見該 commit 的驗證。沒有遠端 CI 結果，不宣稱 push 後這一步一定綠（hermit 內的 cargo-deny 版本與本機可能不同）。
+
+**B5（低）rmcp 宣告與鎖檔不一致。** `crates/buzz-dev-mcp/Cargo.toml` 的下限仍是 `3.4.1`（鎖檔已是 3.9.0），別人只靠宣告 resolve 會拿到有公告的版本；根 `[workspace.dependencies]` 的 `rmcp = "1.1.0"` 沒有任何成員用 `workspace = true` 繼承（`grep` 全部 `Cargo.toml` 確認；11-08 條目也記過「沒有任何 crate 繼承」），卻讓人以為 workspace 仍在 rmcp 1。修法：下限改 `3.9.0`，移除根的死宣告。鎖檔不變（`Cargo.lock` 不存宣告下限）；`cargo metadata --locked`（根與桌面）、`cargo check -p buzz-dev-mcp --locked`、`cargo deny check` 通過。這動了上游持有的 manifest，是對 10-26「manifest 宣告不動」規則的明確例外，已登記 `FORK.md`；同步上游時以上游為準（上游若也升到 3.9.0 則內容相同）。
+
+**B4（低）buzz-agent 仍用 rmcp 1.8.0 → 遷移到 3.9.0，工作量小，直接做。** 評估：`crates/buzz-agent` 只有 `src/mcp.rs`（`CallToolRequestParams`、`RoleClient`／`RunningService`、`TokioChildProcess`、`ServiceError`、`ServiceExt`、`PeerRequestOptions`／`RequestHandle`、`Content`）與測試用的 `tests/bin/fake_mcp.rs`（不 import rmcp）。把 `Cargo.toml` 改成 `rmcp = { version = "3.9.0", default-features = false, features = ["client", "transport-child-process"] }` 後，**編譯錯誤只有一處**：rmcp 3 把 `Content`／`RawContent` 合併成 `#[non_exhaustive]` 的 `ContentBlock`（11-07 試升紀錄預告過）。其餘 API（含 `TokioChildProcess`）原樣可用。
+- 先紅後綠：改 `Cargo.toml` 後 `cargo check -p buzz-agent --tests` 在 `mcp.rs:959/963/1093` 三處解析失敗（紅）；改成 `ContentBlock`（`match c` 取代 `match &c.raw`，加保底分支 `_ => "[content elided: unsupported block type]"`，`#[non_exhaustive]` 要求）後編譯通過；既有的 `mcp::content_tests`（文字截斷、圖片通過／超額略過、預算）即是行為測試，遷移前後都綠。
+- 驗證：`cargo test -p buzz-agent --locked --no-fail-fast` 遷移前（HEAD）與遷移後逐條比對測試結果**完全相同**：571 ok／108 FAILED。那 108 個失敗是本機既有的（遷移前就紅，Databricks、fake LLM、hints 路徑斷言、部分子行程測試；原因沒有逐一查，沒有確認根因，`hints::tests::discover_skills_dedup_by_name` 斷言路徑含 `/`，推測是 Windows 路徑分隔），與這次改動無關是由「前後結果逐條相同」得出；結果含 `mcp::content_tests::*` 全綠，以及真的起 `fake_mcp` 子行程走 `TokioChildProcess` 的 `cancel_kills_inflight_tool_via_mcp_notification` 綠。同一批整合測試在本機不能當 rmcp 3 的證據（`mcp_init_timeout_kills_child`、`mcp_server_count_cap`、`cancel_sends_notifications_cancelled_to_any_mcp_server` 本機遷移前就紅），交給 CI。
+- 連帶：根 `Cargo.lock` 與桌面 `Cargo.lock` 不再有 rmcp 1.8.0；根 `deny.toml` 移除 RUSTSEC-2026-0462 ignore 與 rmcp 的 `[[bans.features]]`，rmcp ban 改為對所有消費者禁 <3.9.0（不再有 `buzz-agent` wrapper）；桌面 `deny.toml` 同步；`tests/fork` 的 rmcp 鎖檔測試改為「兩份鎖檔都沒有 <3.9.0 的 rmcp」。`cargo deny check`（根）與桌面檢查都 ok，`cargo metadata --locked` 兩邊通過。
+- 對上游：這是 fork 第一次改產品碼，行為不變、只是型別改名，已在 `mcp.rs` 加 `fork patch (SanHsien/buzz)` 標記並登記 `FORK.md`；上游若自己遷移，同步時以上游為準。回貢上游屬於另案，需維護者在對話明確同意。
+
+**推送前審查的三項修正（2026-11-11，B2 的後續）。**
+- **quick-xml 0194／0195 的 reason 不實（「no patched release reachable yet」）。** 修補版 quick-xml >=0.41.0 存在，rust-s3 0.38.0 也依賴 `quick-xml ^0.41`。評估升級（rust-s3 0.37 → 0.38，三個 crate 宣告：buzz-media、buzz-relay、buzz-test-client；buzz-media 自己的 `quick-xml = "0.38"`）：**不是小改，不做。** rust-s3 0.38.0 同時要求 `aws-creds 0.40.0`，而根 `Cargo.toml` 的 `[patch.crates-io]` 把 aws-creds 釘在 0.39.1 的 fork（EKS Pod Identity 憑證，durch/rust-s3#449，上游持有、生產 relay 依賴）；要升 rust-s3 必須先把這個 patch 改基於 0.40 或移除，那是憑證路徑的行為變動，不是鎖檔升級。只升 buzz-media 的 quick-xml 沒有用（rust-s3／aws-creds 仍帶 0.38.4）。因此兩處（根與桌面 `deny.toml`）reason 改成真實狀態，退出條件為「aws-creds fork pin 重基或移除後，rust-s3 0.38 與 buzz-media quick-xml 0.41 一起升」。plist／netdev 在根鎖另帶 0.39.4，也同一條 ignore。
+- 桌面 `deny.toml` 開頭的指令註解被我誤接成一行，改成完整可執行指令（含 `--all-features`）；zip 8.6.0 的理由改為「逐筆複製、不還原權限與 symlink」；zip 4.6.1 的退出條件寫明 tauri-plugin-updater 2.14.1 需要 tauri ^2.12（鎖為 2.11.5，審查提供，未自行驗證），先要升 tauri。
+- `.github/dependency-deferrals.json` 的 `rmcp` 條目已過時（所有宣告下限都是 3.9.0），移除。
+
+## 2026-11-13 CI 紅燈根因（run 43032776077、43032775590，2026-11-11 推送 `eacece02`）
+
+修正 11-11 的兩項「未驗證」：B2 的桌面 deny 步驟確實紅燈，B4 的 rmcp 遷移確實打破一個 buzz-agent 測試。`install-action` 那行 `::error::` 是模板裡的 bail 函式字串，該步驟實際成功（`cargo-nextest` installed）；不是紅燈來源。
+
+1. **Rust / Unit Tests：`tool_metadata_caps_enforced` 逾時（B4 遷移造成的真回歸）。** fixture 是 200 個 100 KB 描述，單行 `tools/list` 約 20 MB。rmcp 3.9 的 stdio 讀取器預設單行上限 16 MiB（`DEFAULT_MAX_LINE_LENGTH`，`transport/async_rw.rs`）：超過即丟棄並 log error，請求沒有回應，直到 2 秒 init timeout。rmcp 1.8 沒有這個上限，所以 `880dac9`（11-10 綠）通過。本機以暫時的 Windows 絕對路徑 cwd 重現（`list_tools many: timeout after 2s`）；把 init timeout 拉到 30 秒後測試仍失敗，確認是丟棄而不是慢。修法：fixture 改 `FAKE_MCP_DESC_SIZE=65536`（200 × 64 KB ≈ 13 MB，低於上限），仍超過 128 工具上限與 1024 B 描述上限，測試釘的性質不變。修後本機 `cargo test -p buzz-agent --test regressions tool_metadata_caps_enforced` 通過（0.96 秒，暫時絕對路徑 cwd；repo 內 `/tmp` 保留，Windows 本機另有既有的 cwd 失敗，見 11-11 B4）。
+   - **已知產品面限制（未修）：** 真實 server 若回傳 > 16 MiB 的 `tools/list`，現在會靜默逾時，不再被接受。`TokioChildProcess` 不暴露行長設定，要改需自組 `AsyncRwTransport::with_max_line_length`。判定：agent 本身上限是 128 工具、1 KB 描述，這個量級沒有合理的 server；記為限制。重審條件：有實際 server 超過 16 MiB，或 rmcp 改預設。
+2. **Security Domain / Security：桌面 cargo-deny 步驟的 CLI 參數錯誤（B2 造成，本 fork 自己的紅燈）。** `cargo-deny --manifest-path … --all-features --config … check …` 在 hermit 釘的 cargo-deny 0.19 回 `unexpected argument '--config'`。11-11 B2 的本機驗證用的是 0.20.2（`--config` 位置寬鬆），兩版行為不同，當時沒有用 CI 釘的版本驗。修法：改在 `desktop/src-tauri` 內執行（`cd desktop/src-tauri && cargo-deny --all-features check advisories bans sources`），cargo-deny 會讀該目錄的 `deny.toml`（0.20.2 已確認 `using config from …desktop\src-tauri\deny.toml`，exit 0）。`tests/fork` 的對應斷言同步改寫。`Security` 閘門 job 是此 job 的連帶紅燈。
+3. **Dependency freshness：`Dependency maintenance is required`，不是 nostr（nostr 0.45.7 仍 DEFERRED）。** 六列 `REVIEW UPDATE`：registry 已超過延後版本，或新列未登記：`@tauri-apps/plugin-opener` 2.7.2 → 2.7.3、`motion` 14.10.1 → 14.12.0、`rusqlite` 0.41.1 → 0.42.0、`syn` 3.0.9 → 3.0.10、`azure/setup-helm` 5.0.1 → 5.1.0、`taiki-e/install-action` 2.90.2 → 2.90.3。開著的 Dependabot PR 為 0。依 2026-10-26 規則（manifest 宣告與上游持有的 workflow pin 不升）重新延後，更新 `deferredLatest` 並重審理由，同 11-07 做法。這些升級都要改 manifest 或上游 pin，不是鎖檔相容更新，所以沒有升。`rusqlite` 的技術理由仍成立：mesh-llm tag v0.76.2 要求 `^0.40`，0.42 也在範圍外。
+4. **其餘紅燈是 infra，不是程式碼。** Desktop Tauri 三個 job 與 Desktop Smoke E2E 十個 job 的 apt 步驟對 `azure.archive.ubuntu.com` 的 `InRelease` 逾時（`Ign:`）；Desktop E2E Integration 的 `docker compose pull` 失敗。這些只能重跑。
+5. **B2 的「沒有遠端 CI 結果」註記已由上面第 2 項證偽**：該步驟在遠端紅燈，不是只有本機未驗。
