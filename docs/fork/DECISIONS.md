@@ -472,3 +472,10 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **為什麼**：維護者 2026-11-07 傾向壓縮仍與上游共用歷史的 fork；本線 forks 0、open PR 0、release 0，沒有會被打斷的下游。
 - **影響**：與上游不再有共同歷史，帶進上游改動只能 cherry-pick 或手動移植（`UPSTREAM.md` 已同步改寫）；上游追蹤照舊靠 `tools/upstream_baseline.json` 水位與 `upstream-check.yml`。舊歷史保存在維運長本機 clone 的 tag `pre-squash-history`（`9252ecfd5`，未推送）。
 - **CI 註記**：根提交在 push 事件上讓 `scripts/check-file-sizes-core.mjs` 取 `HEAD^1` 失敗（run `43975238369`，`fatal: Not a valid object name HEAD^1^{commit}`），其餘 job 連帶判紅、實際測試沒跑；同一個 tree 在壓縮前的 run `43330790260` 是綠的。這是上游腳本對「沒有父提交」的假設，本 commit 之後就有父提交，不改上游腳本。
+
+## 2026-11-22 提示詞稽核：`base_prompt.md` 去掉重複的 `--help` 指示（艦隊規劃長代決）
+
+- **做了什麼**：`crates/buzz-acp/src/base_prompt.md` 的 `## Buzz CLI` 段刪掉第 18 行開頭「Run `buzz --help` or `buzz <group> --help` for full usage.」。同段第 10–12 行已兩次要模型跑 `buzz --help`，第三次只是措辭不同的重複。這是上游持有檔的例外修補，已列入 FORK.md 修補表（不加標記，因為標記會進提示）。
+- **刻意不做**：稽核另提議把第 79 行「Address people using the name shown in their own message header. Preserve it exactly; …」併進第 45 行。沒做：`crates/buzz-acp/src/lib.rs` 的 `shared_base_prompt_teaches_single_command_mentions_and_preflight` 同時釘住「Do not expand a short display name, infer a surname」（大寫 D）與「Preserve it exactly; do not infer, expand, or look up a surname」兩句，上游刻意要兩處都在；照稽核 diff 合併會讓這兩條斷言失敗。
+- **驗證**：`cargo test -p buzz-acp agent_draft_prompt_tests`、`tools/dev_check.ps1`。
+- **重審條件**：上游改寫 `## Buzz CLI` 段時，丟掉本修補、以上游為準。

@@ -44,6 +44,7 @@
 | `crates/buzz-agent/Cargo.toml`、`crates/buzz-agent/src/mcp.rs`（含兩份 `Cargo.lock` 移除 rmcp 1.8.0） | rmcp 1.8 → 3.9.0 遷移（公告 RUSTSEC-2026-0462 等的修補版只有 3.x）：產品碼只有 `tool_result_content` 的型別改名（`Content`／`RawContent` → `ContentBlock`，該 enum 是 `#[non_exhaustive]`，多一個保底分支把未知區塊以標記略過）；`TokioChildProcess` 的用法不用改。行為與上游相同，是產品碼的例外，已用 `fork patch` 標記；同步上游時以上游為準（上游自己遷移時內容應相同）（2026-11-11 獨立覆核發現） |
 | `Cargo.toml`（根）、`crates/buzz-dev-mcp/Cargo.toml` | rmcp 宣告：`buzz-dev-mcp` 下限 3.4.1 → 3.9.0（與鎖檔實際版本一致，3.9.0 以下含公告）；根 `[workspace.dependencies]` 沒有任何成員繼承的 `rmcp = "1.1.0"` 移除（2026-11-11 獨立覆核發現）。這是 manifest 宣告的例外，鎖檔不變 |
 | `crates/buzz-dev-mcp/src/{shell,read_file}.rs` | 只動 `#[cfg(test)]`：Windows 平行測試共用一把 env 鎖（`e3561ee`），不影響執行期 |
+| `crates/buzz-acp/src/base_prompt.md` | 刪掉 `## Buzz CLI` 段第三次重複的「Run `buzz --help` or `buzz <group> --help` for full usage.」一句（同段開頭已講兩次）。這份是送給受管 agent 的提示，加標記會進提示本身，所以不加 `fork patch` 標記、只列在這裡；同步上游時以上游為準，上游若仍保留該句就重刪。原因見 `docs/fork/DECISIONS.md` 2026-11-22 |
 
 上游持有的 `AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。唯一的例外是 `README.md` 標題下那段「Maintained fork」說明，見上表，合併上游時要保留。
 
