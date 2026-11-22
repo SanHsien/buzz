@@ -493,4 +493,3 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 **驗證**：本機 `cargo-deny check`（根）`advisories ok, bans ok, licenses ok, sources ok`；桌面 `cargo-deny --all-features check advisories bans sources` `advisories ok, bans ok, sources ok`。CI 用 hermit 釘的 cargo-deny 0.19，以推送後的 Security job 為準。
 
 **退出條件**：url 不需要（已升）；zip 例外隨 mesh-llm v0.79+ SDK 遷移與 tauri-plugin-updater 換掉 zip 4 移除（ROADMAP 既有列）；chrono／humantime 需遷移到 `time`／`jiff`。上游審查 baseline 不前進：這次只單筆採用 `66b463fb2`。
-
