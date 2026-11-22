@@ -35,6 +35,20 @@ ignore = [
     { id = "RUSTSEC-2026-0368", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
     { id = "RUSTSEC-2026-0369", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
     { id = "RUSTSEC-2026-0429", reason = "zip 4.6.1 via tauri-plugin-updater (signature-verified bundle) and zip 8.6.0 via mesh-llm (entries copied one by one, no permission or symlink restore)" },
+    # 2026-11-23 zip advisories (fork; root deny.toml takes the same four from upstream 66b463fb2).
+    # zip 4.6.1 is built by tauri-plugin-updater with default-features = false (Windows only):
+    # no `aes-crypto` (0545), no `legacy-zip` (0547), and it reads through ZipArchive, never
+    # ZipStreamReader (0548). It does call ZipArchive::extract (0546, escaping symlinks), but only
+    # on the bundle whose minisign signature was verified first, same reason as 0368. zip 8.6.0
+    # via mesh-llm is deflate-only and copies entries by hand. Exit: same as the entries above.
+    { id = "RUSTSEC-2026-0545", reason = "zip 4.6.1 (updater, default-features off) and 8.6.0 (mesh-llm, deflate only): aes-crypto not compiled" },
+    { id = "RUSTSEC-2026-0546", reason = "zip 4.6.1 via tauri-plugin-updater extracts only the signature-verified bundle; zip 8.6.0 via mesh-llm never extracts" },
+    { id = "RUSTSEC-2026-0547", reason = "zip 4.6.1 (updater, default-features off) and 8.6.0 (mesh-llm, deflate only): legacy-zip not compiled" },
+    { id = "RUSTSEC-2026-0548", reason = "zip 4.6.1 via tauri-plugin-updater and 8.6.0 via mesh-llm read through ZipArchive only; no ZipStreamReader use" },
+    # chrono / humantime: unmaintained, not vulnerable; mirrors the root deny.toml (upstream 66b463fb2).
+    # chrono is a direct dependency; humantime arrives via mesh-llm → hf-xet → xet-runtime.
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained, not vulnerable; direct dependency; removal needs a time/jiff migration" },
+    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained, not vulnerable; via mesh-llm → hf-xet → xet-runtime; no maintained release" },
     # quick-xml 0.38.4 via rust-s3/aws-creds/buzz-media: responses from our own S3 endpoint.
     # Patched quick-xml >= 0.41.0 exists, but rust-s3 0.38.0 (quick-xml ^0.41) needs aws-creds 0.40
     # and the root Cargo.toml [patch.crates-io] pins aws-creds to a fork of 0.39.1 (EKS Pod Identity

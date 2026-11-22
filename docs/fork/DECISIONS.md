@@ -479,3 +479,18 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **刻意不做**：稽核另提議把第 79 行「Address people using the name shown in their own message header. Preserve it exactly; …」併進第 45 行。沒做：`crates/buzz-acp/src/lib.rs` 的 `shared_base_prompt_teaches_single_command_mentions_and_preflight` 同時釘住「Do not expand a short display name, infer a surname」（大寫 D）與「Preserve it exactly; do not infer, expand, or look up a surname」兩句，上游刻意要兩處都在；照稽核 diff 合併會讓這兩條斷言失敗。
 - **驗證**：`cargo test -p buzz-acp agent_draft_prompt_tests`、`tools/dev_check.ps1`。
 - **重審條件**：上游改寫 `## Buzz CLI` 段時，丟掉本修補、以上游為準。
+
+## 2026-11-23 Security job 紅燈根因（CI run 44996091117、45028889352；`1498ff9f7`、`27d977b8c`）
+
+**根因**：不是 workflow 壞掉，是 2026-11 新公布的 RustSec 公告讓 `cargo-deny check`（根 workspace）失敗：chrono（RUSTSEC-2026-0543）與 humantime（0542）列為 unmaintained；zip 8.6.0 四則（0545–0548）；url 2.5.8 的 `Url::origin()` 堆疊溢位（0592，修補版 2.5.9）。根步驟失敗後，fork 自己加的桌面步驟沒有跑到；本機以 cargo-deny 0.20.2 跑桌面那步，同樣七則全紅。
+
+**處理**：
+
+- 根 `deny.toml`：`cherry-pick -x` 上游 `66b463fb2`（#9609），上游對 chrono、humantime 與 zip 8 的 ignore 與影響評估（zip 8 只經 examples-only 的 `buzz-mesh-smoke` → mesh-llm v0.76.2，deflate only、不 extract）。衝突只在 quick-xml 註解，保留 fork 較精確的版本。
+- url：上游 `main` 仍是 2.5.8（0592 上游還沒處理），兩個鎖檔都 `cargo update -p url --precise 2.5.9`（連帶 form_urlencoded 1.2.3）。本機 cargo 1.98 在桌面鎖檔順手把 `data-encoding-macro-internal` 的 `syn` 從 2.0.118 改解成 1.0.109，與本次無關，手動還原；`cargo metadata --locked` 兩個 workspace 都通過。
+- `desktop/src-tauri/deny.toml`：補 0545–0548、0542、0543 的 ignore。zip 4.6.1 由 tauri-plugin-updater 2.10.1 以 `default-features = false` 建置（只在 Windows），沒有 `aes-crypto`／`legacy-zip`、不用 `ZipStreamReader`；它會呼叫 `ZipArchive::extract`（0546），但只對先通過 minisign 簽章驗證的更新包，理由與既有 0368 相同。
+
+**驗證**：本機 `cargo-deny check`（根）`advisories ok, bans ok, licenses ok, sources ok`；桌面 `cargo-deny --all-features check advisories bans sources` `advisories ok, bans ok, sources ok`。CI 用 hermit 釘的 cargo-deny 0.19，以推送後的 Security job 為準。
+
+**退出條件**：url 不需要（已升）；zip 例外隨 mesh-llm v0.79+ SDK 遷移與 tauri-plugin-updater 換掉 zip 4 移除（ROADMAP 既有列）；chrono／humantime 需遷移到 `time`／`jiff`。上游審查 baseline 不前進：這次只單筆採用 `66b463fb2`。
+
