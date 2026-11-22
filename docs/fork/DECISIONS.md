@@ -493,3 +493,23 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 **驗證**：本機 `cargo-deny check`（根）`advisories ok, bans ok, licenses ok, sources ok`；桌面 `cargo-deny --all-features check advisories bans sources` `advisories ok, bans ok, sources ok`。CI 用 hermit 釘的 cargo-deny 0.19，以推送後的 Security job 為準。
 
 **退出條件**：url 不需要（已升）；zip 例外隨 mesh-llm v0.79+ SDK 遷移與 tauri-plugin-updater 換掉 zip 4 移除（ROADMAP 既有列）；chrono／humantime 需遷移到 `time`／`jiff`。上游審查 baseline 不前進：這次只單筆採用 `66b463fb2`。
+
+## 2026-11-23（再續）Desktop Smoke E2E (5) 紅燈根因：TipTap 共用樣式標籤被刪，composer 失去 `white-space: pre-wrap`（CI run 45057281448、44785447283）
+
+**現象**：`mentions.spec.ts:807`（inline code 後的空白）、`:833`、`:1534`（persona mention chip）在 shard 5 反覆失敗；`e6a249dfc` 與 `6ac2caee3` 之間只有文件差異，前者綠（但 `:833`、`:1534` 已是 flaky），後者兩次 attempt 都紅。上游 `main` 同一份 spec（與 fork 逐字相同）在 run 44936140945 全綠，耗時 2.5s；fork 失敗的耗時 6.8s，是等到逾時。
+
+**取證**：
+
+- 失敗時送出的內容是 `run \`@ALICE\` now`（`readOutgoingMentionPubkeys` 比對的是一般空白，所以回 `null`）；persona 失敗的畫面是 `Ask @Fizzfor a hand`，chip 消失。
+- 用 transaction／MutationObserver 追：按 Enter 選 Fizz 後文件是 `Ask @Fizz `、PM 選取在空白之後；打空白時 Chromium 把字插進 chip 的 `Fizz` 文字節點、再把尾端那個空白節點拿掉，下一個字就把空白取代掉。
+- 失敗那幾次 composer 的 computed `white-space` 是 `normal`，成功那幾次是 `break-spaces`，一一對應。`normal` 時尾端空白會塌陷，Chromium 打 U+00A0、並把游標正規化到塌陷空白之前。
+- 規則來自 TipTap 在執行期注入的共用 `<style data-tiptap-style>`。追蹤它的 append／remove：`Editor.destroy()` → `unmount()` 在「當下文件裡沒有 `.tiptap` 元素」時把共用標籤刪掉；開頻道時 composer 會重掛載數次，最後一次刪掉之後沒有再加回，就停在沒有樣式的狀態。3.22.5 與 3.30.5 的 `unmount()` 這段相同，所以不是單純版本回歸；fork 鎖的 prosemirror-view 1.42.x 實測讓撞到的機率變高（見下一點），tiptap 版本的影響沒有量。
+- 曾懷疑 prosemirror-view：本機逐版各跑 15 次，1.41.8／1.41.9／1.42.0／1.42.5 為 0 失敗，1.42.4 1、1.42.6 3、1.42.8 4、1.42.9 7；但 1.42.3 再跑 30 次也有 1 次失敗，版本只改變機率，不是根因。1.42.3 以下有 XSS 公告（Dependabot #116），也不能退。
+
+**修法**：`desktop/src/shared/styles/globals/composer.css` 加上與 TipTap `style.ts` 相同的 `.ProseMirror` 規則（`white-space: pre-wrap; white-space: break-spaces` 等），樣式表裡的規則不會在執行期被刪。這是上游持有的產品檔，加 `fork patch` 標記並登記 FORK.md。`mentions.spec.ts` 檔尾加一支測試：刪掉 `style[data-tiptap-style]` 後 composer 仍是 `pre-wrap`／`break-spaces`，且 inline code 後打的空白送出時是一般空白。
+
+**驗證（本機 Windows、Playwright 1.60、prosemirror-view 1.42.9）**：修前那三支各 5 次有 7 次失敗；修後三支加新測試累計重跑 180 次，179 次通過；唯一一次失敗出現在用 line reporter 的那一輪，沒有留下是哪一支，之後 115 次都綠，殘餘機率另行觀察 CI。拿掉 CSS 修補時新測試 3／3 失敗（`Received: "normal"`），加回後通過。
+
+**沒做**：不加 retry、不拉長 timeout；不改 `injectCSS`（關掉之後仍要自己提供同樣規則，效果相同但多改一處）。
+
+**同批另見**：`inbox-edit.spec.ts:560`（`fill("")` 沒清掉內容）與 `video-attachment.spec.ts:1469`（右鍵選單逾時）的處理見下一節與 ROADMAP。

@@ -92,6 +92,37 @@
   );
 }
 
+/*
+ * fork patch (SanHsien/buzz): ProseMirror needs `white-space: pre-wrap` (or
+ * break-spaces). TipTap only provides it through one shared runtime
+ * <style data-tiptap-style>, and `Editor.unmount()` deletes that tag whenever
+ * no `.tiptap` element is in the document at that moment. During a channel
+ * switch the composer remounts, so the tag can be deleted while the new
+ * composer still uses it. Without the rule Chromium collapses trailing spaces
+ * and types U+00A0: a space after an inline code span is sent as a
+ * non-breaking space, and the caret after a mention chip moves back into the
+ * chip, so the next word joins the name. Same rules as TipTap's style.ts, kept
+ * in the app stylesheet so they cannot be removed at runtime.
+ */
+.ProseMirror {
+  word-wrap: break-word;
+  /* TipTap also lists a pre-wrap fallback first; every webview Buzz ships on
+     (WebView2, WKWebView, WebKitGTK) supports break-spaces. */
+  white-space: break-spaces;
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0;
+}
+
+.ProseMirror [contenteditable="false"] {
+  white-space: normal;
+}
+
+.ProseMirror [contenteditable="false"] [contenteditable="true"],
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
 .rich-text-composer .tiptap {
   @apply text-message font-normal tracking-normal;
   outline: none;

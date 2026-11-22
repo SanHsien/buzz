@@ -5168,3 +5168,42 @@ test("delayed inaccessible agent profile keeps all actions hidden", async ({
     ),
   ).toHaveCount(0);
 });
+
+// fork patch (SanHsien/buzz): TipTap's shared <style data-tiptap-style> is
+// deleted by `Editor.unmount()` when no `.tiptap` element is attached at that
+// moment, which a composer remount can hit. Without `white-space: pre-wrap`
+// Chromium types U+00A0 for a trailing space and moves the caret back into a
+// mention chip (CI run 45057281448). The rule has to come from the app
+// stylesheet, so it must survive the tag being gone.
+test("composer keeps pre-wrap white-space without TipTap's runtime style tag", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByTestId("channel-general").click();
+  await expect(page.getByTestId("chat-title")).toHaveText("general");
+
+  const input = page.getByTestId("message-input");
+  await page.evaluate(() => {
+    for (const tag of document.querySelectorAll("style[data-tiptap-style]")) {
+      tag.remove();
+    }
+  });
+  expect(
+    await page.evaluate(
+      () => document.querySelectorAll("style[data-tiptap-style]").length,
+    ),
+  ).toBe(0);
+  expect(
+    await input.evaluate((element) => getComputedStyle(element).whiteSpace),
+  ).toMatch(/^(pre-wrap|break-spaces)$/);
+
+  await input.click();
+  await page.keyboard.type("run `@ALICE`");
+  await expect(input.locator("code")).toHaveText("@ALICE");
+  await page.keyboard.press(" ");
+  await page.keyboard.type("now");
+  await page.getByTestId("send-message").click();
+  await expect
+    .poll(() => readOutgoingMentionPubkeys(page, "run `@ALICE` now"))
+    .toEqual([]);
+});
