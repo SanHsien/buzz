@@ -521,3 +521,16 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **處理**：`git cherry-pick -x 428f0dcd2`，只改測試（`clearComposer` 等 focus 落定後再逐次 select-all＋Delete），無衝突。2026-11-02 裁決把它 defer 的理由是「桌面端需實機驗收」，但這筆不動產品碼，該理由不適用。
 - **驗證（本機 Windows）**：改到的 8 支 spec 共 171 支測試，169 過；失敗的 `messaging.spec.ts:1775`（貼回的 code block 每行多尾端空白）在帶入前、拿掉 CSS 修補也 3／3 失敗，是本機既有差異；`remote-owned-mentions.spec.ts:376` 在等 `channel-general` 時逾時一次，單獨重跑 3／3 過。
 - **沒帶**：同批的 `1eb67bb52`（#8680，產品競態，含 `video-attachment.spec.ts:1469`）有衝突，列在 ROADMAP。
+
+## 2026-11-23（媒體 proxy）桌面本機媒體 proxy 加 Host／Origin 守門（DNS rebinding）
+
+- **問題**：`desktop/src-tauri/src/media_proxy.rs` 的 `spawn_media_proxy` 綁 `127.0.0.1:0`，`proxy_handler` 只在有 `Origin` 時比對，**不看 `Host`**，且放行沒有 `Origin` 的請求。DNS rebinding 的頁面對自己的網域發請求，同源所以瀏覽器不送 `Origin`，`Host` 卻是攻擊者的網域；於是任何網頁都能經這個 proxy 帶著使用者的 relay 憑證（`mint_media_get_auth`）取媒體。2026-11-22 艦隊稽核發現，列在 ROADMAP 中期（等上游修或維護者決定例外修補）。
+- **裁決**：維護者授權以 `fork patch` 例外修補這個產品檔（先前「不改產品碼」的裁決對這條安全洞讓步；FORK.md 修補表已登記，檔內有 `fork patch (SanHsien/buzz)` 標記）。
+- **做法**（判斷方式學自 codebase-memory-mcp `45e1c697` 的 graph-ui proxy：自己檢查 Host／Origin，不信上一層）：
+  - `reject_foreign_requests` 是掛在整個 router 上的 axum middleware（`with_loopback_guard`），handler 之前就回 403；port 取自 listener 實際綁到的 port。
+  - `Host`：小寫後必須是 `127.0.0.1`、`localhost`、`[::1]` 之一，後面可無 port 或帶**本 proxy 的** port（帶別的 port、`localhost.evil.com`、缺 `Host` 都回 403）。
+  - `Origin`：有就必須是桌面 app 自己的 origin（Tauri 在 macOS／Linux 用 `tauri://localhost`、Windows 用 `http://tauri.localhost`，原程式碼已是這兩個）；debug 建置另收 `http://localhost:1420`（`tauri.conf.json` 的 `devUrl`，與 `linux_media.rs` 同一做法）。沒有 `Origin` 照常放行：前端用 `<video>`／`<img>` 直接載入 `http://127.0.0.1:PORT/media/…`（`mediaUrl.ts`），這類載入不帶 `Origin`，程式碼也沒有任何 JS `fetch` 這個 proxy，所以不能要求一定有 `Origin`。
+  - 原本 handler 內的 Origin 檢查移到 middleware，行為不變，另外「`Origin` 標頭存在但為空字串」現在也算不符（瀏覽器不會送空 `Origin`）。
+- **沒做**：參考實作還限制 request body；這個 proxy 只有 `GET /media/{*path}`，沒有要緩衝的請求本體，所以不加。`buzz-media:` 自訂協定（`handle_buzz_media`）不是 TCP 監聽，不受 rebinding 影響，不動。
+- **測試**（`media_proxy::tests`，真的在 loopback socket 上送 Host／Origin）：`dns_rebound_host_is_refused_with_403`、`foreign_origin_is_refused_with_403_even_with_a_loopback_host`、`loopback_request_without_origin_or_from_the_app_passes`、`host_parsing_accepts_only_loopback_names_with_the_own_port`、`dev_server_origin_is_trusted_in_debug_builds_only`。
+- **退出條件**：上游在 `media_proxy.rs` 補了 Host 檢查時，同步以上游為準並丟掉本修補、刪 FORK.md 該列。

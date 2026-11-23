@@ -2,6 +2,7 @@ use axum::{
     body::Body,
     extract::{Request, State as AxumState},
     http::{HeaderMap, HeaderValue, StatusCode},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
     Router,
@@ -26,19 +27,94 @@ struct ProxyState {
     app_handle: tauri::AppHandle,
 }
 
-async fn proxy_handler(AxumState(state): AxumState<ProxyState>, req: Request) -> Response {
-    // Allow requests with no Origin (e.g. <video> element fetches) or from
-    // the Tauri webview origin. Blocks cross-origin JS fetches from other
-    // tabs/apps while letting HTML media resource loads through.
-    let origin = req
-        .headers()
-        .get("origin")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    if !origin.is_empty() && origin != "tauri://localhost" && origin != "http://tauri.localhost" {
-        return (StatusCode::FORBIDDEN, "forbidden: invalid origin").into_response();
-    }
+// fork patch (SanHsien/buzz): Host/Origin guard against DNS rebinding for the loopback
+// media proxy (docs/fork/DECISIONS.md, 2026-11-23); on a sync conflict upstream wins,
+// then redo the guard if upstream has not added its own.
 
+/// Origins the app's own webview sends: Tauri serves the packaged app from
+/// `tauri://localhost` (macOS/Linux) or `http://tauri.localhost` (Windows).
+const TRUSTED_ORIGINS: &[&str] = &["tauri://localhost", "http://tauri.localhost"];
+
+/// The Vite dev server (`devUrl` in `tauri.conf.json`); trusted in debug builds only,
+/// as in `linux_media.rs`.
+#[cfg(debug_assertions)]
+const DEV_ORIGIN: &str = "http://localhost:1420";
+
+/// Whether a `Host` header names this loopback proxy. A DNS-rebound page reaches the
+/// listener with its attacker-controlled name (`evil.example:PORT`) in `Host`, so only a
+/// loopback name is accepted, with no port or with this proxy's own port.
+fn is_own_loopback_host(host: &str, own_port: u16) -> bool {
+    let host = host.trim().to_ascii_lowercase();
+    let (name, tail) = if host.starts_with('[') {
+        let Some(end) = host.find(']') else {
+            return false;
+        };
+        host.split_at(end + 1)
+    } else {
+        match host.find(':') {
+            Some(at) => host.split_at(at),
+            None => (host.as_str(), ""),
+        }
+    };
+    if !matches!(name, "127.0.0.1" | "localhost" | "[::1]") {
+        return false;
+    }
+    match tail.strip_prefix(':') {
+        None => tail.is_empty(),
+        Some(port) => {
+            !port.is_empty()
+                && port.bytes().all(|b| b.is_ascii_digit())
+                && port.parse::<u16>().is_ok_and(|p| p == own_port)
+        }
+    }
+}
+
+/// Whether an `Origin` header is one of the desktop app's own origins.
+fn is_trusted_origin(origin: &str) -> bool {
+    if TRUSTED_ORIGINS.contains(&origin) {
+        return true;
+    }
+    #[cfg(debug_assertions)]
+    if origin == DEV_ORIGIN {
+        return true;
+    }
+    false
+}
+
+/// Reject requests that did not come from this machine's loopback or the app's webview.
+/// A request without `Origin` (a plain `<video>`/`<img>` load) passes; one with `Origin`
+/// must carry an app origin. The `Host` check is what stops DNS rebinding, because a
+/// rebound page is same-origin with the attacker's name and may send no `Origin` at all.
+async fn reject_foreign_requests(
+    AxumState(own_port): AxumState<u16>,
+    req: Request,
+    next: Next,
+) -> Response {
+    let headers = req.headers();
+    let host_ok = headers
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|h| is_own_loopback_host(h, own_port));
+    if !host_ok {
+        return (StatusCode::FORBIDDEN, "forbidden: invalid host").into_response();
+    }
+    if let Some(origin) = headers.get("origin") {
+        if !origin.to_str().is_ok_and(is_trusted_origin) {
+            return (StatusCode::FORBIDDEN, "forbidden: invalid origin").into_response();
+        }
+    }
+    next.run(req).await
+}
+
+/// Put the Host/Origin guard in front of every route of `router`.
+fn with_loopback_guard(router: Router, own_port: u16) -> Router {
+    router.layer(middleware::from_fn_with_state(
+        own_port,
+        reject_foreign_requests,
+    ))
+}
+
+async fn proxy_handler(AxumState(state): AxumState<ProxyState>, req: Request) -> Response {
     let path_and_query = req
         .uri()
         .path_and_query()
@@ -165,14 +241,17 @@ pub async fn spawn_media_proxy(http_client: reqwest::Client, app_handle: tauri::
         app_handle,
     };
 
-    let app = Router::new()
-        .route("/media/{*path}", get(proxy_handler))
-        .with_state(proxy_state);
-
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("failed to bind media proxy");
     let port = listener.local_addr().unwrap().port();
+
+    let app = with_loopback_guard(
+        Router::new()
+            .route("/media/{*path}", get(proxy_handler))
+            .with_state(proxy_state),
+        port,
+    );
 
     tokio::spawn(async move {
         axum::serve(listener, app).await.ok();
@@ -368,4 +447,120 @@ fn error_response(status: u16, msg: &str) -> http::Response<Vec<u8>> {
                 .body(Vec::new())
                 .unwrap()
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Serve `with_loopback_guard` over a trivial route on a real loopback socket, so the
+    /// tests send actual `Host`/`Origin` headers instead of calling the helpers directly.
+    async fn spawn_guarded_test_server() -> u16 {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let app = with_loopback_guard(
+            Router::new().route("/media/{*path}", get(|| async { "media bytes" })),
+            port,
+        );
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.ok();
+        });
+        port
+    }
+
+    async fn get_status(port: u16, host: Option<&str>, origin: Option<&str>) -> u16 {
+        let mut req = reqwest::Client::new().get(format!("http://127.0.0.1:{port}/media/abc.png"));
+        if let Some(host) = host {
+            req = req.header("host", host);
+        }
+        if let Some(origin) = origin {
+            req = req.header("origin", origin);
+        }
+        req.send().await.unwrap().status().as_u16()
+    }
+
+    #[tokio::test]
+    async fn dns_rebound_host_is_refused_with_403() {
+        let port = spawn_guarded_test_server().await;
+        // The rebound page's own name arrives in `Host`, with or without an Origin.
+        assert_eq!(
+            get_status(port, Some(&format!("evil.example.com:{port}")), None).await,
+            403
+        );
+        assert_eq!(get_status(port, Some("evil.example.com"), None).await, 403);
+        // Look-alikes of a loopback name are not loopback.
+        assert_eq!(
+            get_status(port, Some(&format!("localhost.evil.com:{port}")), None).await,
+            403
+        );
+        assert_eq!(
+            get_status(port, Some(&format!("127.0.0.1.evil.com:{port}")), None).await,
+            403
+        );
+        // A loopback name with another service's port is not this proxy.
+        let other_port = u32::from(port) + 1;
+        assert_eq!(
+            get_status(port, Some(&format!("localhost:{other_port}")), None).await,
+            403
+        );
+    }
+
+    #[tokio::test]
+    async fn foreign_origin_is_refused_with_403_even_with_a_loopback_host() {
+        let port = spawn_guarded_test_server().await;
+        for origin in [
+            "https://evil.example.com",
+            "http://localhost:3000",
+            "tauri://localhost.evil.com",
+            "null",
+        ] {
+            assert_eq!(
+                get_status(port, None, Some(origin)).await,
+                403,
+                "origin {origin} must be refused"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn loopback_request_without_origin_or_from_the_app_passes() {
+        let port = spawn_guarded_test_server().await;
+        // `<video>`/`<img>` loads send no Origin; reqwest's default Host is 127.0.0.1:PORT.
+        assert_eq!(get_status(port, None, None).await, 200);
+        assert_eq!(
+            get_status(port, Some(&format!("localhost:{port}")), None).await,
+            200
+        );
+        assert_eq!(
+            get_status(port, Some(&format!("[::1]:{port}")), None).await,
+            200
+        );
+        for origin in ["tauri://localhost", "http://tauri.localhost"] {
+            assert_eq!(get_status(port, None, Some(origin)).await, 200, "{origin}");
+        }
+    }
+
+    #[test]
+    fn host_parsing_accepts_only_loopback_names_with_the_own_port() {
+        assert!(is_own_loopback_host("127.0.0.1:4000", 4000));
+        assert!(is_own_loopback_host("LOCALHOST:4000", 4000));
+        assert!(is_own_loopback_host("[::1]:4000", 4000));
+        assert!(is_own_loopback_host("localhost", 4000));
+        assert!(!is_own_loopback_host("", 4000));
+        assert!(!is_own_loopback_host("localhost:", 4000));
+        assert!(!is_own_loopback_host("localhost:+4000", 4000));
+        assert!(!is_own_loopback_host("localhost:4000x", 4000));
+        assert!(!is_own_loopback_host("localhost:4001", 4000));
+        assert!(!is_own_loopback_host("[::1", 4000));
+        assert!(!is_own_loopback_host("[::2]:4000", 4000));
+        assert!(!is_own_loopback_host("127.0.0.2:4000", 4000));
+        assert!(!is_own_loopback_host("10.0.0.5:4000", 4000));
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn dev_server_origin_is_trusted_in_debug_builds_only() {
+        assert!(is_trusted_origin("http://localhost:1420"));
+        assert!(!is_trusted_origin("http://localhost:14200"));
+    }
 }
