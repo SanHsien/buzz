@@ -534,3 +534,9 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **沒做**：參考實作還限制 request body；這個 proxy 只有 `GET /media/{*path}`，沒有要緩衝的請求本體，所以不加。`buzz-media:` 自訂協定（`handle_buzz_media`）不是 TCP 監聽，不受 rebinding 影響，不動。
 - **測試**（`media_proxy::tests`，真的在 loopback socket 上送 Host／Origin）：`dns_rebound_host_is_refused_with_403`、`foreign_origin_is_refused_with_403_even_with_a_loopback_host`、`loopback_request_without_origin_or_from_the_app_passes`、`host_parsing_accepts_only_loopback_names_with_the_own_port`、`dev_server_origin_is_trusted_in_debug_builds_only`。
 - **退出條件**：上游在 `media_proxy.rs` 補了 Host 檢查時，同步以上游為準並丟掉本修補、刪 FORK.md 該列。
+
+## 2026-11-24 RUSTSEC-2026-0594（cookie 0.18.1）：升鎖檔，不加 ignore
+
+- **問題**：公告 2026-11-23 發布（nonce 在 fork 後的行程重複，Patched >=0.18.3，Affected OS: linux），命中 `desktop/src-tauri/Cargo.lock` 的 `cookie 0.18.1`（由 `tauri` 拉入），「Security: Dependency policy (desktop)」紅燈。與 media proxy 修補無關。
+- **做法**：`cargo update -p cookie --precise 0.18.3`，只動桌面鎖檔（`tauri` 的約束允許，不需升上層）；manifest 不動。根 workspace 鎖檔沒有 cookie。上游 `block/buzz` 尚未處理同一公告。
+- **驗證**：桌面 `cargo deny --all-features check advisories bans sources` 三項 ok。
