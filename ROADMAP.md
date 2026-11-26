@@ -13,6 +13,7 @@ Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
+| 移除 `RUSTSEC-2026-0600` 例外與 OpenSSL 功能禁令 | `kube-client` 升到 4.2.1 以上的 4.x 或 5.2.0 以上 | 依上游版本驗證 Kubernetes 後端後，移除兩筆相依規則，再跑 `cargo-deny check` | Codex | `deny.toml`、`docs/fork/DECISIONS.md` 2026-11-26 |
 | 同步延後變更 | 可用受影響平台／Postgres 的完整驗收環境；本批長編碼／長行拒收需符合政策的修訂或維護者明確決定 | 依固定裁決逐筆帶入（#8711、#8922、#9287 已帶入，不在此列），保留 FORK.md 修補與發布 guard；重跑 Tauri advisory 盤點、維護工具及受影響產品閘門；提交後檢查 CI，不能把已審查水位當成產品同步完成 | Codex | docs/fork/UPSTREAM_REVIEW_2026-10-30.md；docs/fork/UPSTREAM_REVIEW_2026-10-30.json；docs/fork/UPSTREAM_REVIEW_2026-11-02.md（84 commit、195 PR、15 issue；2026-11-07 起 #8711 改 adopt）；docs/fork/UPSTREAM_REVIEW_2026-11-02.json；docs/fork/UPSTREAM_REVIEW_2026-11-10.md（238 commit、360 PR、25 issue）；docs/fork/UPSTREAM_REVIEW_2026-11-10.json |
 | 隨上游採用編輯器與 selector 安全更新 | 取代已關閉未合併 #8624 的上游修補合併，或 typography 放寬 selector 版本且可由相容鎖檔更新解決 | 對照實際修補 commit 與依賴鏈帶入；連結貼上回歸與 desktop 型別檢查通過，對應 Dependabot 告警 state=fixed | Codex | docs/fork/UPSTREAM_REVIEW_2026-10-30.md「#8624 與路線圖」；docs/fork/DECISIONS.md |
 | 隨上游遷移 glib 與 lru 依賴鏈（rmcp 已於 2026-11-11 全部到 3.9.0（桌面鎖與 buzz-agent 遷移）；剩 glib、lru） | 上游完成相容遷移或依賴鏈容許修補版 | 檢查 buzz-agent 實際依賴與兩份 Cargo.lock，跑受影響 Rust／Tauri gate；移除已不需要的 advisory ignore | Codex | docs/fork/DECISIONS.md:56、78、82-86；deny.toml |

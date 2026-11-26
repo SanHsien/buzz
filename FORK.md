@@ -51,6 +51,8 @@
 
 上游持有的 `AGENTS.md`、`CLAUDE.md` 等**不改**，避免日後同步衝突。唯一的例外是 `README.md` 標題下那段「Maintained fork」說明，見上表，合併上游時要保留。
 
+根目錄 `deny.toml` 的 `RUSTSEC-2026-0600` 例外只適用現有 rustls 設定，並由 `bans.features` 禁用 `kube-client` 的 `openssl-tls`。升到修補版後撤除這組規則，見 `docs/fork/DECISIONS.md`。
+
 ## 分支與 remote
 
 - `origin/main`：`SanHsien/buzz`，主要維護線。

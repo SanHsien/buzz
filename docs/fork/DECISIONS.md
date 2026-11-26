@@ -544,3 +544,9 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 ## 2026-11-26：只移植 #8680 的同秒時間軸排序
 
 固定上游 `1eb67bb52`，只取 live cache 與 channel window 的排序，以及同秒順序和影片選單回歸測試。relay cursor 沿用原有比較方式，歷史查詢仍以同秒 ID 升冪傳回。整批採用時另一個捲動案例失敗，保留於隔離工作樹供後續追查。證據見 [維護審查](../../REVIEW.md)。
+
+## 2026-11-26：限制 kube-client 使用的 TLS 功能
+
+CI run `45813727072` 的十個 Desktop Smoke E2E 都通過。Security job `139888395641` 另因 kube-client 2.0.1 的 [RUSTSEC-2026-0600](https://rustsec.org/advisories/RUSTSEC-2026-0600) 失敗。
+
+`cargo tree --workspace --all-features --locked --target all -e features -i kube-client` 顯示只編入 `rustls-tls` 路徑。工作區未宣告 `openssl-tls`，也沒有呼叫 OpenSSL 專用的 Kubernetes 連線 API。這次只為現有依賴圖記例外，同時在 `bans.features` 禁用 kube-client 的 `openssl-tls`。本機實際依賴圖通過 advisories 和 bans。合成的同名套件打開該功能時，cargo-deny 回報 `error[feature-banned]`。等依賴升到修補版後移除例外與禁令。

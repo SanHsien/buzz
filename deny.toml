@@ -93,6 +93,9 @@ ignore = [
     # is not covered by this reason. Remove when BOTH the workspace `lru = "0.16"` (buzz-relay)
     # and launchdarkly-server-sdk have moved to lru >= 0.18.2.
     { id = "RUSTSEC-2026-0253", reason = "lru 0.16.4 via launchdarkly-server-sdk =3.2.0; unsound only if a key Drop panics under catch_unwind; keys are String; patched >= 0.18.2 needs the launchdarkly pin to move" },
+    # fork patch (SanHsien/buzz): the workspace uses only the rustls connector.
+    # The matching bans.features entry below rejects any OpenSSL connector activation.
+    { id = "RUSTSEC-2026-0600", reason = "kube-client uses rustls-tls; the affected openssl-tls feature is forbidden below. Remove when kube-client moves to a patched version" },
 ]
 
 [licenses]
@@ -174,3 +177,8 @@ deny = [
     { name = "libsqlite3-sys", version = "<0.39", wrappers = ["rusqlite"], reason = "older SQLite is limited to the guarded rusqlite dependency" },
     { name = "ringbuf", version = "<0.5.2", wrappers = ["neteq"], reason = "only audited NetEQ may declare this unused vulnerable dependency; all other consumers must use a patched release" },
 ]
+
+[[bans.features]]
+name = "kube-client"
+deny = ["openssl-tls"]
+reason = "RUSTSEC-2026-0600 exception requires the OpenSSL connector to remain disabled"
