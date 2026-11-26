@@ -540,3 +540,7 @@ OPEN PR 的 head 會漂移，結論只對 JSON 記錄的 head 有效。推進水
 - **問題**：公告 2026-11-23 發布（nonce 在 fork 後的行程重複，Patched >=0.18.3，Affected OS: linux），命中 `desktop/src-tauri/Cargo.lock` 的 `cookie 0.18.1`（由 `tauri` 拉入），「Security: Dependency policy (desktop)」紅燈。與 media proxy 修補無關。
 - **做法**：`cargo update -p cookie --precise 0.18.3`，只動桌面鎖檔（`tauri` 的約束允許，不需升上層）；manifest 不動。根 workspace 鎖檔沒有 cookie。上游 `block/buzz` 尚未處理同一公告。
 - **驗證**：桌面 `cargo deny --all-features check advisories bans sources` 三項 ok。
+
+## 2026-11-26：只移植 #8680 的同秒時間軸排序
+
+固定上游 `1eb67bb52`，只取 live cache 與 channel window 的排序，以及同秒順序和影片選單回歸測試。relay cursor 沿用原有比較方式，歷史查詢仍以同秒 ID 升冪傳回。整批採用時另一個捲動案例失敗，保留於隔離工作樹供後續追查。證據見 [維護審查](../../REVIEW.md)。

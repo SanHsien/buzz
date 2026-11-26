@@ -9,7 +9,7 @@ Buzz 是可自行架設、讓人與代理共用簽章事件記錄的通訊工作
 ## 近期：可以直接動手
 | 項目 | 為什麼 | 驗收方式 | 建議執行者 | 證據 |
 | --- | --- | --- | --- | --- |
-| 帶入上游 `1eb67bb52`（#8680）修 `video-attachment.spec.ts:1469` 右鍵選單逾時 | CI run 45057281448 attempt 1 的 Desktop Smoke E2E (10)：三次都在 `[data-video-context-menu]` 的「Download video」／「Copy link」等不到（30s 逾時）；DECISIONS 2026-10-26 第 8 點已記過同一支。上游 #8680 §10 查出是產品競態：同一秒的訊息在 live cache 合併（id 升冪）與 channel window 投影（id 降冪）排序不一致，兩列在畫面上互換，選單開在別列。fork 2026-11-02 裁決 defer | `git cherry-pick -x 1eb67bb52`：`desktop/tests/e2e/virtualization.spec.ts` 有衝突（上游那段依賴 fork 沒有的較早 wheel-trace 改法），要逐段判斷；其餘 25 檔自動合併。跑 `video-attachment`、`voice-note`、`empty-edit-delete`、`channel-browser`、`virtualization`、`channel-dense-second-reach` 與 desktop 單元測試，推送後 CI 的 Desktop Smoke E2E 綠 | Claude／Codex | 上游 `1eb67bb52`；run 45057281448 job 137315725503；docs/fork/DECISIONS.md 2026-11-23（再續） |
+| 驗收同秒排序修正 `c87a77682`（上游 #8680 部分移植） | 影片右鍵及同秒排序測試本機通過。整批移植另有捲動測試失敗，保留候選供後續重審 | GitHub Desktop Smoke E2E 全綠後移除此列 | Codex | [維護審查](REVIEW.md) |
 
 ## 中期：等條件成立再做
 | 項目 | 觸發條件 | 驗收方式 | 建議執行者 | 證據 |
